@@ -33,4 +33,18 @@ export class UsersService {
       },
     });
   }
+
+  async updateHashedRefreshToken(userId: string, hashedRefreshToken: string | null): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { hashedRefreshToken },
+    });
+  }
+
+  update(id: string, data: { name?: string; avatarUrl?: string }): Promise<User> {
+    return this.prisma.user.update({
+      where: { id },
+      data,
+    });
+  }
 }
