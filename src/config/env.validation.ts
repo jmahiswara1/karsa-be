@@ -11,4 +11,6 @@ export const envSchema = z.object({
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   GOOGLE_CALLBACK_URL: z.string().optional(),
+  AI_SERVICE_URL: z.string().url().default('http://localhost:8000'),
+  AI_SERVICE_TOKEN: z.string().default('karsa_dev_token'),
 });
