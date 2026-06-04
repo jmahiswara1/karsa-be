@@ -20,11 +20,20 @@ export class ResponseInterceptor<T> implements NestInterceptor<T, Response<T>> {
     next: CallHandler,
   ): Observable<Response<T>> {
     return next.handle().pipe(
-      map((data: T) => ({
-        success: true,
-        message: 'Success',
-        data: data !== undefined && data !== null ? data : ({} as T),
-      })),
+      map((data: any) => {
+        // If the controller already wrapped the response, don't wrap it again
+        if (data && typeof data === 'object' && 'success' in data && 'data' in data) {
+          return {
+            ...data,
+            message: data.message || 'Success',
+          };
+        }
+        return {
+          success: true,
+          message: 'Success',
+          data: data !== undefined && data !== null ? data : ({} as T),
+        };
+      }),
     );
   }
 }
