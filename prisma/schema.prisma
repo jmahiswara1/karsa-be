@@ -1,5 +1,5 @@
 generator client {
-  provider = "prisma-client-js"
+  provider   = "prisma-client-js"
   engineType = "library"
 }
 
@@ -44,14 +44,15 @@ enum Mood {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  name      String
-  password  String?
-  googleId  String?  @unique
-  avatarUrl String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                 String   @id @default(uuid())
+  email              String   @unique
+  name               String
+  password           String?
+  googleId           String?  @unique
+  avatarUrl          String?
+  hashedRefreshToken String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   projects      Project[]
   tasks         Task[]
@@ -63,6 +64,7 @@ model User {
   preferences   UserPreference?
   activityLogs  ActivityLog[]
   notifications Notification[]
+  taskColumns   TaskColumn[]
 }
 
 model Tag {
@@ -94,11 +96,23 @@ model Project {
   aiSuggestions AISuggestion[]
 }
 
+model TaskColumn {
+  id        String   @id @default(uuid())
+  name      String
+  order     Int      @default(0)
+  userId    String
+  createdAt DateTime @default(now())
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks Task[]
+}
+
 model Task {
   id          String     @id @default(uuid())
   title       String
   description String?
   status      TaskStatus @default(TODO)
+  order       Int        @default(0)
   priority    Priority   @default(MEDIUM)
   deadline    DateTime?
   estimate    Int?
@@ -106,9 +120,11 @@ model Task {
   updatedAt   DateTime   @updatedAt
   userId      String
   projectId   String?
+  columnId    String?
 
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   project       Project?       @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  column        TaskColumn?    @relation(fields: [columnId], references: [id], onDelete: SetNull)
   reminder      Reminder?
   tags          Tag[]
   aiSuggestions AISuggestion[]
