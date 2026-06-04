@@ -3,6 +3,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { CreateNoteDto } from './dto/create-note.dto';
 import { UpdateNoteDto } from './dto/update-note.dto';
 import { NoteQueryDto } from './dto/note-query.dto';
+import { ReorderNotesDto } from './dto/reorder-notes.dto';
 import { Prisma } from '@prisma/client';
 
 @Injectable()
@@ -19,12 +20,17 @@ export class NotesService {
   }
 
   async findAll(userId: string, query: NoteQueryDto) {
-    const { projectId, search, page = 1, limit = 10 } = query;
+    const { projectId, search, folderId } = query;
+    const page = Number(query.page || 1);
+    const limit = Number(query.limit || 10);
     const skip = (page - 1) * limit;
+
+    const fid = folderId === 'null' ? null : folderId;
 
     const where: Prisma.NoteWhereInput = {
       userId,
       ...(projectId && { projectId }),
+      ...(folderId !== undefined && { folderId: fid }),
       ...(search && {
         OR: [
           { title: { contains: search, mode: 'insensitive' } },
@@ -38,7 +44,7 @@ export class NotesService {
         where,
         skip,
         take: limit,
-        orderBy: { createdAt: 'desc' },
+        orderBy: [{ order: 'asc' }, { createdAt: 'desc' }],
         include: {
           project: {
             select: { id: true, title: true },
@@ -77,11 +83,42 @@ export class NotesService {
   }
 
   async update(userId: string, id: string, updateNoteDto: UpdateNoteDto) {
-    await this.findOne(userId, id); // Ensure it exists and belongs to user
+    const existing = await this.findOne(userId, id); // Ensure it exists and belongs to user
+    
+    // If only structural/metadata fields are updated, preserve the existing updatedAt
+    const keys = Object.keys(updateNoteDto);
+    const isOnlyMetadata = keys.length > 0 && keys.every(key => ['folderId', 'order'].includes(key));
+    
     return this.prisma.note.update({
       where: { id },
-      data: updateNoteDto,
+      data: {
+        ...updateNoteDto,
+        ...(isOnlyMetadata ? { updatedAt: existing.updatedAt } : {})
+      },
     });
+  }
+
+  async reorder(userId: string, reorderNotesDto: ReorderNotesDto) {
+    const { notes } = reorderNotesDto;
+    
+    const existingNotes = await this.prisma.note.findMany({
+      where: { id: { in: notes.map(n => n.id) }, userId },
+      select: { id: true, updatedAt: true }
+    });
+    const existingMap = new Map(existingNotes.map(n => [n.id, n.updatedAt]));
+    
+    // Execute multiple updates in a transaction
+    await this.prisma.$transaction(
+      notes.map((note) =>
+        this.prisma.note.update({
+          where: { id: note.id, userId },
+          data: { 
+            order: note.order,
+            updatedAt: existingMap.get(note.id) // preserve original updatedAt
+          },
+        }),
+      ),
+    );
   }
 
   async remove(userId: string, id: string) {

@@ -37,6 +37,9 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   get taskColumn() {
     return this.client.taskColumn;
   }
+  get noteFolder() {
+    return this.client.noteFolder;
+  }
   get $transaction() {
     return this.client.$transaction.bind(this.client);
   }

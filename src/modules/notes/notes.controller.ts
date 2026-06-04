@@ -3,6 +3,7 @@ import { NotesService } from './notes.service';
 import { CreateNoteDto } from './dto/create-note.dto';
 import { UpdateNoteDto } from './dto/update-note.dto';
 import { NoteQueryDto } from './dto/note-query.dto';
+import { ReorderNotesDto } from './dto/reorder-notes.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { User } from '@prisma/client';
@@ -29,6 +30,15 @@ export class NotesController {
       success: true,
       message: 'Notes retrieved successfully',
       ...result,
+    };
+  }
+
+  @Patch('reorder')
+  async reorder(@CurrentUser() user: User, @Body() reorderNotesDto: ReorderNotesDto) {
+    await this.notesService.reorder(user.id, reorderNotesDto);
+    return {
+      success: true,
+      message: 'Notes reordered successfully',
     };
   }
 

@@ -21,4 +21,8 @@ export class NoteQueryDto {
   @Min(1)
   @IsOptional()
   limit?: number = 10;
+
+  @IsString()
+  @IsOptional()
+  folderId?: string;
 }

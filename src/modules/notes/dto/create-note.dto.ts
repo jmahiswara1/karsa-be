@@ -12,4 +12,8 @@ export class CreateNoteDto {
   @IsString()
   @IsOptional()
   projectId?: string;
+
+  @IsString()
+  @IsOptional()
+  folderId?: string;
 }

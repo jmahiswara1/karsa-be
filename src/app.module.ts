@@ -11,6 +11,7 @@ import { TasksModule } from './modules/tasks/tasks.module';
 import { NotesModule } from './modules/notes/notes.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { TaskColumnsModule } from './modules/task-columns/task-columns.module';
+import { NoteFoldersModule } from './modules/note-folders/note-folders.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { TaskColumnsModule } from './modules/task-columns/task-columns.module';
     NotesModule,
     DashboardModule,
     TaskColumnsModule,
+    NoteFoldersModule,
   ],
   controllers: [AppController],
   providers: [AppService],
