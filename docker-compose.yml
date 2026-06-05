@@ -1,10 +1,8 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:16-alpine
     container_name: karsa_postgres
-    restart: always
+    restart: unless-stopped
     environment:
       POSTGRES_USER: karsa
       POSTGRES_PASSWORD: karsa_password
@@ -13,15 +11,59 @@ services:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks: [karsa_network]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U karsa -d karsa_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:7-alpine
     container_name: karsa_redis
-    restart: always
+    restart: unless-stopped
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
+    networks: [karsa_network]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  be-karsa:
+    build: .
+    container_name: karsa_be
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      PORT: 3001
+      NODE_ENV: production
+      DATABASE_URL: postgresql://karsa:karsa_password@karsa_postgres:5432/karsa_db?schema=public
+      REDIS_URL: redis://karsa_redis:6379
+      AI_SERVICE_URL: http://karsa_ai:8000
+      AI_SERVICE_TOKEN: ${BE_AI_SERVICE_TOKEN:-gadangganteng}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_ACCESS_EXPIRES_IN: 15m
+      JWT_REFRESH_EXPIRES_IN: 7d
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      GOOGLE_CALLBACK_URL: http://localhost:3001/api/auth/google/callback
+      CORS_ORIGIN: http://localhost:3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks: [karsa_network]
+
+networks:
+  karsa_network:
+    external: true
 
 volumes:
   postgres_data:
