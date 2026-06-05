@@ -40,6 +40,12 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   get noteFolder() {
     return this.client.noteFolder;
   }
+  get dailyPlan() {
+    return this.client.dailyPlan;
+  }
+  get plannerEntry() {
+    return this.client.plannerEntry;
+  }
   get $transaction() {
     return this.client.$transaction.bind(this.client);
   }

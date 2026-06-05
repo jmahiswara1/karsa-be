@@ -13,6 +13,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { TaskColumnsModule } from './modules/task-columns/task-columns.module';
 import { NoteFoldersModule } from './modules/note-folders/note-folders.module';
 import { AssistantModule } from './modules/assistant/assistant.module';
+import { PlannerModule } from './modules/planner/planner.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { AssistantModule } from './modules/assistant/assistant.module';
     TaskColumnsModule,
     NoteFoldersModule,
     AssistantModule,
+    PlannerModule,
   ],
   controllers: [AppController],
   providers: [AppService],
