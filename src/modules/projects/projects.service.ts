@@ -20,14 +20,18 @@ export class ProjectsService {
 
   async findAll(userId: string, query: ProjectQueryDto) {
     try {
-      const { status, priority, search } = query;
+      const { status, priority, search, sort, order, includeArchived } = query;
       const page = Number(query.page || 1);
       const limit = Number(query.limit || 10);
       const skip = (page - 1) * limit;
 
       const where: Prisma.ProjectWhereInput = {
         userId,
-        ...(status && { status }),
+        ...(status
+          ? { status }
+          : !includeArchived
+            ? { status: { not: 'ARCHIVED' } }
+            : {}),
         ...(priority && { priority }),
         ...(search && {
           OR: [
@@ -37,12 +41,21 @@ export class ProjectsService {
         }),
       };
 
+      const orderBy: Prisma.ProjectOrderByWithRelationInput =
+        sort === 'deadline'
+          ? { deadline: order || 'asc' }
+          : sort === 'priority'
+            ? { priority: order || 'desc' }
+            : sort === 'title'
+              ? { title: order || 'asc' }
+              : { createdAt: order || 'desc' };
+
       const [data, total] = await Promise.all([
         this.prisma.project.findMany({
           where,
           skip,
           take: limit,
-          orderBy: { createdAt: 'desc' },
+          orderBy,
           include: {
             _count: {
               select: { tasks: true },
@@ -52,22 +65,23 @@ export class ProjectsService {
         this.prisma.project.count({ where }),
       ]);
 
-      // Calculate progress for each project based on tasks
-      const projectsWithProgress = await Promise.all(
-        data.map(async (project) => {
-          const completedTasks = await this.prisma.task.count({
-            where: { projectId: project.id, status: 'DONE' },
-          });
-          
-          const totalTasks = project._count?.tasks || 0;
-          const progress =
-            totalTasks > 0
-              ? Math.round((completedTasks / totalTasks) * 100)
-              : 0;
-              
-          return { ...project, progress };
-        }),
+      const projectIds = data.map((p) => p.id);
+      const completedCounts = await this.prisma.task.groupBy({
+        by: ['projectId'],
+        where: { projectId: { in: projectIds }, status: 'DONE' },
+        _count: { _all: true },
+      });
+      const completedMap = new Map(
+        completedCounts.map((c) => [c.projectId, c._count._all]),
       );
+
+      const projectsWithProgress = data.map((project) => {
+        const totalTasks = project._count?.tasks || 0;
+        const completedTasks = completedMap.get(project.id) || 0;
+        const progress =
+          totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+        return { ...project, progress };
+      });
 
       return {
         data: projectsWithProgress,
@@ -97,7 +111,9 @@ export class ProjectsService {
       throw new NotFoundException(`Project with ID ${id} not found`);
     }
 
-    const completedTasks = project.tasks.filter((t) => t.status === 'DONE').length;
+    const completedTasks = project.tasks.filter(
+      (t) => t.status === 'DONE',
+    ).length;
     const progress =
       project.tasks.length > 0
         ? Math.round((completedTasks / project.tasks.length) * 100)

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
-import type { User } from '@prisma/client';
+import type { User, UserPreference } from '@prisma/client';
+import { UpdatePreferenceDto } from './dto/update-preference.dto';
 
 @Injectable()
 export class UsersService {
@@ -34,17 +35,42 @@ export class UsersService {
     });
   }
 
-  async updateHashedRefreshToken(userId: string, hashedRefreshToken: string | null): Promise<void> {
+  async updateHashedRefreshToken(
+    userId: string,
+    hashedRefreshToken: string | null,
+  ): Promise<void> {
     await this.prisma.user.update({
       where: { id: userId },
       data: { hashedRefreshToken },
     });
   }
 
-  update(id: string, data: { name?: string; avatarUrl?: string }): Promise<User> {
+  update(
+    id: string,
+    data: { name?: string; avatarUrl?: string },
+  ): Promise<User> {
     return this.prisma.user.update({
       where: { id },
       data,
+    });
+  }
+
+  async getPreferences(userId: string): Promise<UserPreference> {
+    return this.prisma.userPreference.upsert({
+      where: { userId },
+      create: { userId },
+      update: {},
+    });
+  }
+
+  async updatePreferences(
+    userId: string,
+    data: UpdatePreferenceDto,
+  ): Promise<UserPreference> {
+    return this.prisma.userPreference.upsert({
+      where: { userId },
+      create: { userId, ...data },
+      update: data,
     });
   }
 }
