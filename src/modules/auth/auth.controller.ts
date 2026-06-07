@@ -29,7 +29,7 @@ export class AuthController {
     // Redirect to frontend with tokens (in production, use secure HttpOnly cookies)
     const frontendUrl = process.env.CORS_ORIGIN || 'http://localhost:3000';
     res.redirect(
-      `${frontendUrl}/auth/callback?access_token=${tokens.accessToken}&refresh_token=${tokens.refreshToken}`,
+      `${frontendUrl}/callback?access_token=${tokens.accessToken}&refresh_token=${tokens.refreshToken}`,
     );
   }
 
@@ -44,8 +44,13 @@ export class AuthController {
 
   @Post('refresh')
   @UseGuards(JwtRefreshAuthGuard)
-  async refreshTokens(@Req() req: Request & { user: User & { refreshToken: string } }) {
-    const tokens = await this.authService.refreshTokens(req.user.id, req.user.refreshToken);
+  async refreshTokens(
+    @Req() req: Request & { user: User & { refreshToken: string } },
+  ) {
+    const tokens = await this.authService.refreshTokens(
+      req.user.id,
+      req.user.refreshToken,
+    );
     return {
       success: true,
       data: tokens,
