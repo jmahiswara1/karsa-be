@@ -82,6 +82,8 @@ export class PlannerController {
       dto.energyLevel,
       dto.mood,
       dto.date,
+      dto.startDate,
+      dto.endDate,
     );
     return { success: true, data: result };
   }

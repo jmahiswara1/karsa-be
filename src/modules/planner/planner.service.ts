@@ -18,6 +18,7 @@ interface PlannerEntryData {
 }
 
 interface AiTimeBlock {
+  date?: string;
   task_id: string | null;
   title: string;
   start_time: string;
@@ -154,6 +155,8 @@ export class PlannerService {
     energyLevel: string,
     mood: string,
     date?: string,
+    startDate?: string,
+    endDate?: string,
   ) {
     const tasks = await this.prisma.task.findMany({
       where: {
@@ -176,27 +179,51 @@ export class PlannerService {
       return { blocks: [], focus_message: null, workload_level: 'NONE' };
     }
 
-    const aiResult = await this.callAiService(energyLevel, mood, tasks);
+    const aiResult = await this.callAiService(
+      energyLevel,
+      mood,
+      tasks,
+      startDate,
+      endDate,
+    );
 
-    // Delete previous AI-generated entries for this date
-    const planDate = date ? new Date(date) : this.startOfToday();
-    await this.prisma.plannerEntry.deleteMany({
-      where: {
-        userId,
-        date: planDate,
-        isAiGenerated: true,
-      },
-    });
+    // Delete previous AI-generated entries
+    if (startDate && endDate) {
+      await this.prisma.plannerEntry.deleteMany({
+        where: {
+          userId,
+          date: {
+            gte: new Date(startDate),
+            lte: new Date(endDate),
+          },
+          isAiGenerated: true,
+        },
+      });
+    } else {
+      const planDate = date ? new Date(date) : this.startOfToday();
+      await this.prisma.plannerEntry.deleteMany({
+        where: {
+          userId,
+          date: planDate,
+          isAiGenerated: true,
+        },
+      });
+    }
 
     // Create new entries from AI blocks
     const created = await Promise.all(
-      aiResult.blocks.map((block, i) =>
-        this.prisma.plannerEntry.create({
+      aiResult.blocks.map((block, i) => {
+        const blockDate = block.date
+          ? new Date(block.date)
+          : date
+            ? new Date(date)
+            : this.startOfToday();
+        return this.prisma.plannerEntry.create({
           data: {
             userId,
             title: block.title,
             description: block.reason,
-            date: planDate,
+            date: blockDate,
             startTime: block.start_time,
             endTime: block.end_time,
             taskId: block.task_id,
@@ -209,8 +236,8 @@ export class PlannerService {
               select: { id: true, title: true, priority: true, status: true },
             },
           },
-        }),
-      ),
+        });
+      }),
     );
 
     return {
@@ -232,6 +259,8 @@ export class PlannerService {
       estimate: number | null;
       project: { title: string } | null;
     }>,
+    startDate?: string,
+    endDate?: string,
   ): Promise<AiPlanResponse> {
     let aiUrl = process.env.AI_SERVICE_URL || 'http://127.0.0.1:8000';
     aiUrl = aiUrl.replace('localhost', '127.0.0.1');
@@ -258,6 +287,8 @@ export class PlannerService {
           energy_level: energyLevel,
           mood,
           tasks: taskList,
+          start_date: startDate,
+          end_date: endDate,
         }),
       });
 
