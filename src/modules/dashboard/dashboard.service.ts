@@ -19,13 +19,17 @@ export class DashboardService {
     const todayTasksPromise = this.prisma.task.findMany({
       where: {
         userId,
-        status: { not: 'DONE' },
-        deadline: {
-          gte: today,
-          lte: endOfToday,
-        },
+        status: { notIn: ['DONE', 'CANCELLED'] },
+        OR: [
+          { deadline: { lte: endOfToday } },
+          { deadline: null },
+          { status: 'IN_PROGRESS' },
+        ]
       },
-      orderBy: { priority: 'desc' },
+      orderBy: [
+        { priority: 'desc' },
+        { createdAt: 'desc' }
+      ],
       take: 10,
     });
 
@@ -102,18 +106,32 @@ export class DashboardService {
       include: { project: { select: { title: true } } },
     });
 
+    // 6. Today's Schedule (Planner Entries)
+    const todaySchedulePromise = this.prisma.plannerEntry.findMany({
+      where: {
+        userId,
+        date: {
+          gte: today,
+          lte: endOfToday,
+        },
+      },
+      orderBy: { startTime: 'asc' },
+    });
+
     const [
       todayTasks,
       taskSummary,
       activeProjects,
       upcomingDeadlines,
       recentNotes,
+      todaySchedule,
     ] = await Promise.all([
       todayTasksPromise,
       taskSummaryPromise,
       activeProjectsPromise,
       upcomingDeadlinesPromise,
       recentNotesPromise,
+      todaySchedulePromise,
     ]);
 
     return {
@@ -122,6 +140,7 @@ export class DashboardService {
       activeProjects,
       upcomingDeadlines,
       recentNotes,
+      todaySchedule,
     };
   }
 }

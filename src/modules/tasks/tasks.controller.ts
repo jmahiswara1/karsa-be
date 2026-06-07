@@ -68,7 +68,7 @@ export class TasksController {
   @Post('reorder')
   async reorder(
     @CurrentUser() user: User,
-    @Body() dto: { tasks: { id: string; order: number; columnId?: string }[] }
+    @Body() dto: { tasks: { id: string; order: number; columnId?: string; status?: any }[] }
   ) {
     await this.tasksService.reorder(user.id, dto.tasks);
     return {

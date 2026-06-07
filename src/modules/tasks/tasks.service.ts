@@ -106,14 +106,15 @@ export class TasksService {
     });
   }
 
-  async reorder(userId: string, tasks: { id: string; order: number; columnId?: string }[]) {
+  async reorder(userId: string, tasks: { id: string; order: number; columnId?: string; status?: any }[]) {
     // Reorder bulk update
     const updates = tasks.map((task) =>
       this.prisma.task.update({
         where: { id: task.id, userId },
         data: { 
           order: task.order,
-          ...(task.columnId !== undefined && { columnId: task.columnId })
+          ...(task.columnId !== undefined && { columnId: task.columnId }),
+          ...(task.status !== undefined && { status: task.status }),
         },
       }),
     );
