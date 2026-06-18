@@ -43,6 +43,11 @@ enum Mood {
   FOCUSED
 }
 
+enum ConversationType {
+  ASSISTANT
+  MINI
+}
+
 model User {
   id                 String   @id @default(uuid())
   email              String   @unique
@@ -67,6 +72,7 @@ model User {
   taskColumns   TaskColumn[]
   noteFolders   NoteFolder[]
   plannerEntries PlannerEntry[]
+  conversations Conversation[]
 }
 
 model Tag {
@@ -282,4 +288,32 @@ model Notification {
   userId    String
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Conversation {
+  id        String           @id @default(uuid())
+  title     String           @default("New Chat")
+  type      ConversationType
+  userId    String
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  @@index([userId, type, updatedAt(sort: Desc)])
+}
+
+model Message {
+  id             String   @id @default(uuid())
+  role           String
+  content        String
+  isStructured   Boolean  @default(false)
+  conversationId String
+  orderIndex     Int
+  createdAt      DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, orderIndex])
 }
