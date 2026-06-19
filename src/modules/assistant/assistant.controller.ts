@@ -16,6 +16,8 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { CreateConversationDto } from './dto/create-conversation.dto';
 import { UpdateConversationDto } from './dto/update-conversation.dto';
 import { CreateMessageDto } from './dto/create-message.dto';
+import { ExecuteActionsDto } from './dto/execute-actions.dto';
+import { CreateEntitiesResponseDto } from './dto/action-result.dto';
 
 @Controller('api/assistant')
 @UseGuards(JwtAuthGuard)
@@ -34,6 +36,14 @@ export class AssistantController {
       throw new Error('Prompt is required');
     }
     return this.assistantService.chat(user.id, prompt);
+  }
+
+  @Post('create-entities')
+  async createEntities(
+    @CurrentUser() user: { id: string },
+    @Body() dto: ExecuteActionsDto,
+  ): Promise<CreateEntitiesResponseDto> {
+    return this.assistantService.createEntities(user.id, dto);
   }
 
   // ── Conversation Endpoints ──────────────────────────────────────
