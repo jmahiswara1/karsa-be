@@ -12,6 +12,7 @@ import { ProjectExecutor } from './executors/project.executor';
 import { NoteExecutor } from './executors/note.executor';
 import { PlannerExecutor } from './executors/planner.executor';
 import { ExecutorContext } from './executors/base.executor';
+import { validateAIOutput } from './utils/output-validation.util';
 
 interface AiToolCall {
   name: string;
@@ -98,7 +99,22 @@ export class AssistantService {
       }
 
       const result = (await response.json()) as { data: unknown };
-      return result.data; // Should return { reply, action, action_data }
+      const aiResponse = result.data; // Unwrap: return { reply, action, action_data } directly
+
+      // Validate AI output to prevent hallucination
+      const validation = validateAIOutput(aiResponse, prompt);
+      if (!validation.isValid) {
+        console.warn('AI output validation failed:', validation.reason);
+        return {
+          reply:
+            validation.cleanedReply ||
+            'Maaf, saya mengalami kesulitan memahami permintaan Anda. Bisa tolong jelaskan lebih spesifik tentang task atau proyek yang ingin Anda buat?',
+          action: null,
+          action_data: null,
+        };
+      }
+
+      return aiResponse;
     } catch (error) {
       console.error('Error communicating with AI service:', error);
       throw new InternalServerErrorException(
@@ -160,6 +176,18 @@ export class AssistantService {
 
       const result = (await response.json()) as { data: AiResponse };
       aiResponse = result.data;
+
+      // Validate AI output to prevent hallucination
+      const validation = validateAIOutput(aiResponse, dto.prompt);
+      if (!validation.isValid) {
+        console.warn('AI output validation failed:', validation.reason);
+        return {
+          reply:
+            validation.cleanedReply ||
+            'Maaf, saya mengalami kesulitan memahami permintaan Anda. Bisa tolong jelaskan lebih spesifik tentang task atau proyek yang ingin Anda buat?',
+          entities: [],
+        };
+      }
     } catch (error) {
       console.error('Error communicating with AI service:', error);
       throw new InternalServerErrorException(

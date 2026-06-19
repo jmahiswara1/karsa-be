@@ -9,6 +9,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { AssistantService } from './assistant.service';
 import { ConversationService } from './conversation.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -18,6 +19,10 @@ import { UpdateConversationDto } from './dto/update-conversation.dto';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { ExecuteActionsDto } from './dto/execute-actions.dto';
 import { CreateEntitiesResponseDto } from './dto/action-result.dto';
+import {
+  detectSuspiciousPrompt,
+  logPromptMetadata,
+} from './utils/prompt-security.util';
 
 @Controller('api/assistant')
 @UseGuards(JwtAuthGuard)
@@ -28,6 +33,7 @@ export class AssistantController {
   ) {}
 
   @Post('chat')
+  @Throttle({ strict: { ttl: 60000, limit: 10 } })
   async chat(
     @CurrentUser() user: { id: string },
     @Body('prompt') prompt: string,
@@ -35,14 +41,39 @@ export class AssistantController {
     if (!prompt) {
       throw new Error('Prompt is required');
     }
+
+    // Deteksi prompt mencurigakan
+    const isSuspicious = detectSuspiciousPrompt(prompt, user.id);
+    if (isSuspicious) {
+      logPromptMetadata(prompt, user.id, true);
+      return {
+        reply:
+          'Maaf, saya mendeteksi instruksi yang tidak biasa. Saya hanya bisa membantu dengan tugas manajemen dan produktivitas di Karsa. Apakah ada task atau proyek yang ingin Anda buat?',
+        action: null,
+        actionData: null,
+      };
+    }
+
     return this.assistantService.chat(user.id, prompt);
   }
 
   @Post('create-entities')
+  @Throttle({ strict: { ttl: 60000, limit: 10 } })
   async createEntities(
     @CurrentUser() user: { id: string },
     @Body() dto: ExecuteActionsDto,
   ): Promise<CreateEntitiesResponseDto> {
+    // Deteksi prompt mencurigakan
+    const isSuspicious = detectSuspiciousPrompt(dto.prompt, user.id);
+    if (isSuspicious) {
+      logPromptMetadata(dto.prompt, user.id, true);
+      return {
+        reply:
+          'Maaf, saya mendeteksi instruksi yang tidak biasa. Saya hanya bisa membantu dengan pembuatan task dan proyek di Karsa. Apakah ada task atau proyek yang ingin Anda buat?',
+        entities: [],
+      };
+    }
+
     return this.assistantService.createEntities(user.id, dto);
   }
 

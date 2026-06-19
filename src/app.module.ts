@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './database/prisma.module';
@@ -21,6 +23,18 @@ import { PlannerModule } from './modules/planner/planner.module';
       isGlobal: true,
       validate: (env) => envSchema.parse(env),
     }),
+    ThrottlerModule.forRoot([
+      {
+        name: 'default',
+        ttl: 60000, // 60 seconds (1 minute)
+        limit: 60, // 60 requests per minute
+      },
+      {
+        name: 'strict',
+        ttl: 60000, // 60 seconds (1 minute)
+        limit: 10, // 10 requests per minute (for AI endpoints)
+      },
+    ]),
     PrismaModule,
     AuthModule,
     UsersModule,
@@ -34,6 +48,12 @@ import { PlannerModule } from './modules/planner/planner.module';
     PlannerModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}
