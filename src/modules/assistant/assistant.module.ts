@@ -8,5 +8,6 @@ import { ConversationService } from './conversation.service';
   imports: [PrismaModule],
   controllers: [AssistantController],
   providers: [AssistantService, ConversationService],
+  exports: [AssistantService],
 })
 export class AssistantModule {}
