@@ -3,7 +3,7 @@ import { Logger } from '@nestjs/common';
 const logger = new Logger('OutputValidation');
 
 // Type definitions
-interface AIResponse {
+export interface AIResponse {
   reply?: string;
   action?: string | null;
   actionData?: unknown;

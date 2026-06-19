@@ -12,7 +12,7 @@ import { ProjectExecutor } from './executors/project.executor';
 import { NoteExecutor } from './executors/note.executor';
 import { PlannerExecutor } from './executors/planner.executor';
 import { ExecutorContext } from './executors/base.executor';
-import { validateAIOutput } from './utils/output-validation.util';
+import { AIResponse, validateAIOutput } from './utils/output-validation.util';
 
 interface AiToolCall {
   name: string;
@@ -98,7 +98,7 @@ export class AssistantService {
         throw new Error(`AI service responded with ${response.status}`);
       }
 
-      const result = (await response.json()) as { data: unknown };
+      const result = (await response.json()) as { data: AIResponse };
       const aiResponse = result.data; // Unwrap: return { reply, action, action_data } directly
 
       // Validate AI output to prevent hallucination
