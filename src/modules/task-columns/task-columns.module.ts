@@ -4,6 +4,6 @@ import { TaskColumnsController } from './task-columns.controller';
 
 @Module({
   providers: [TaskColumnsService],
-  controllers: [TaskColumnsController]
+  controllers: [TaskColumnsController],
 })
 export class TaskColumnsModule {}

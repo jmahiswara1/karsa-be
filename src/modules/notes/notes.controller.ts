@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { NotesService } from './notes.service';
 import { CreateNoteDto } from './dto/create-note.dto';
 import { UpdateNoteDto } from './dto/update-note.dto';
@@ -14,7 +24,10 @@ export class NotesController {
   constructor(private readonly notesService: NotesService) {}
 
   @Post()
-  async create(@CurrentUser() user: User, @Body() createNoteDto: CreateNoteDto) {
+  async create(
+    @CurrentUser() user: User,
+    @Body() createNoteDto: CreateNoteDto,
+  ) {
     const note = await this.notesService.create(user.id, createNoteDto);
     return {
       success: true,
@@ -34,7 +47,10 @@ export class NotesController {
   }
 
   @Patch('reorder')
-  async reorder(@CurrentUser() user: User, @Body() reorderNotesDto: ReorderNotesDto) {
+  async reorder(
+    @CurrentUser() user: User,
+    @Body() reorderNotesDto: ReorderNotesDto,
+  ) {
     await this.notesService.reorder(user.id, reorderNotesDto);
     return {
       success: true,

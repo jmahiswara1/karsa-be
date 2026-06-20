@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 
 export interface CreateTaskColumnDto {
@@ -58,8 +58,15 @@ export class TaskColumnsService {
   }
 
   async remove(id: string, userId: string) {
-    // Find the 'TODO' or first column to move tasks to, or just let them be orphaned or deleted?
-    // It's safer to just delete the column. Tasks will have columnId = null because of SetNull.
+    const column = await this.prisma.taskColumn.findFirst({
+      where: { id, userId },
+    });
+
+    if (column?.isSystem) {
+      throw new ForbiddenException('System columns cannot be deleted');
+    }
+
+    // Tasks will have columnId = null because of SetNull.
     return this.prisma.taskColumn.delete({
       where: { id, userId },
     });
@@ -84,6 +91,7 @@ export class TaskColumnsService {
           data: {
             name,
             order: i * 1000,
+            isSystem: true,
             userId,
           },
         }),
@@ -101,16 +109,16 @@ export class TaskColumnsService {
       const doneCol = columns[2].id;
 
       await this.prisma.$transaction(
-        tasks.map((task: any) => {
+        tasks.map((task) => {
           let targetCol = todoCol;
           if (task.status === 'IN_PROGRESS') targetCol = progCol;
           else if (task.status === 'DONE') targetCol = doneCol;
-          
+
           return this.prisma.task.update({
             where: { id: task.id },
             data: { columnId: targetCol },
           });
-        })
+        }),
       );
     }
 

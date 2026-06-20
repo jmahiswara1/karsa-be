@@ -1,4 +1,8 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { CreateNoteFolderDto } from './dto/create-note-folder.dto';
 import { UpdateNoteFolderDto } from './dto/update-note-folder.dto';
@@ -20,7 +24,9 @@ export class NoteFoldersService {
     });
 
     if (existing) {
-      throw new ConflictException('A folder with this name already exists in the same location');
+      throw new ConflictException(
+        'A folder with this name already exists in the same location',
+      );
     }
 
     if (parentId) {
@@ -70,12 +76,25 @@ export class NoteFoldersService {
     return folder;
   }
 
-  async update(id: string, userId: string, updateNoteFolderDto: UpdateNoteFolderDto) {
+  async update(
+    id: string,
+    userId: string,
+    updateNoteFolderDto: UpdateNoteFolderDto,
+  ) {
     const folder = await this.findOne(id, userId);
 
-    if (updateNoteFolderDto.name !== undefined || updateNoteFolderDto.parentId !== undefined) {
-      const newName = updateNoteFolderDto.name !== undefined ? updateNoteFolderDto.name : folder.name;
-      const newParentId = updateNoteFolderDto.parentId !== undefined ? updateNoteFolderDto.parentId : folder.parentId;
+    if (
+      updateNoteFolderDto.name !== undefined ||
+      updateNoteFolderDto.parentId !== undefined
+    ) {
+      const newName =
+        updateNoteFolderDto.name !== undefined
+          ? updateNoteFolderDto.name
+          : folder.name;
+      const newParentId =
+        updateNoteFolderDto.parentId !== undefined
+          ? updateNoteFolderDto.parentId
+          : folder.parentId;
 
       const existing = await this.prisma.noteFolder.findFirst({
         where: {
@@ -87,7 +106,9 @@ export class NoteFoldersService {
       });
 
       if (existing) {
-        throw new ConflictException('A folder with this name already exists in the destination');
+        throw new ConflictException(
+          'A folder with this name already exists in the destination',
+        );
       }
 
       // Check circular dependency if parentId is updated (basic check: parent cannot be itself)

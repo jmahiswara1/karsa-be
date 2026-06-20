@@ -108,6 +108,7 @@ model TaskColumn {
   id        String   @id @default(uuid())
   name      String
   order     Int      @default(0)
+  isSystem  Boolean  @default(false)
   userId    String
   createdAt DateTime @default(now())
 

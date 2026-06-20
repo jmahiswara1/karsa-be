@@ -24,12 +24,9 @@ export class DashboardService {
           { deadline: { lte: endOfToday } },
           { deadline: null },
           { status: 'IN_PROGRESS' },
-        ]
+        ],
       },
-      orderBy: [
-        { priority: 'desc' },
-        { createdAt: 'desc' }
-      ],
+      orderBy: [{ priority: 'desc' }, { createdAt: 'desc' }],
       take: 10,
     });
 
@@ -53,35 +50,38 @@ export class DashboardService {
     }));
 
     // 3. Active Projects with progress
-    const activeProjectsPromise = this.prisma.project.findMany({
-      where: {
-        userId,
-        status: 'ACTIVE',
-      },
-      include: {
-        _count: {
-          select: { tasks: true },
+    const activeProjectsPromise = this.prisma.project
+      .findMany({
+        where: {
+          userId,
+          status: 'ACTIVE',
         },
-        tasks: {
-          where: { status: 'DONE' },
-          select: { id: true },
+        include: {
+          _count: {
+            select: { tasks: true },
+          },
+          tasks: {
+            where: { status: 'DONE' },
+            select: { id: true },
+          },
         },
-      },
-      take: 5,
-    }).then(projects =>
-      projects.map(p => {
-        const totalTasks = p._count.tasks;
-        const doneTasks = p.tasks.length;
-        const progress = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
-        return {
-          id: p.id,
-          title: p.title,
-          status: p.status,
-          taskCount: totalTasks - doneTasks, // tasks remaining
-          progress,
-        };
+        take: 5,
       })
-    );
+      .then((projects) =>
+        projects.map((p) => {
+          const totalTasks = p._count.tasks;
+          const doneTasks = p.tasks.length;
+          const progress =
+            totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
+          return {
+            id: p.id,
+            title: p.title,
+            status: p.status,
+            taskCount: totalTasks - doneTasks, // tasks remaining
+            progress,
+          };
+        }),
+      );
 
     // 4. Upcoming Deadlines (Tasks due in the next 7 days, excluding today and overdue)
     const upcomingDeadlinesPromise = this.prisma.task.findMany({

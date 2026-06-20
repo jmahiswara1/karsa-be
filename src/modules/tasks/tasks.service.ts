@@ -49,11 +49,7 @@ export class TasksService {
         skip,
         take: limit,
         // Order by columnId, then order, then createdAt
-        orderBy: [
-          { columnId: 'asc' },
-          { order: 'asc' },
-          { createdAt: 'desc' },
-        ],
+        orderBy: [{ columnId: 'asc' }, { order: 'asc' }, { createdAt: 'desc' }],
         include: {
           project: {
             select: { id: true, title: true },
@@ -106,12 +102,15 @@ export class TasksService {
     });
   }
 
-  async reorder(userId: string, tasks: { id: string; order: number; columnId?: string; status?: any }[]) {
+  async reorder(
+    userId: string,
+    tasks: { id: string; order: number; columnId?: string; status?: any }[],
+  ) {
     // Reorder bulk update
     const updates = tasks.map((task) =>
       this.prisma.task.update({
         where: { id: task.id, userId },
-        data: { 
+        data: {
           order: task.order,
           ...(task.columnId !== undefined && { columnId: task.columnId }),
           ...(task.status !== undefined && { status: task.status }),

@@ -22,7 +22,12 @@ export class ResponseInterceptor<T> implements NestInterceptor<T, Response<T>> {
     return next.handle().pipe(
       map((data: any) => {
         // If the controller already wrapped the response, don't wrap it again
-        if (data && typeof data === 'object' && 'success' in data && 'data' in data) {
+        if (
+          data &&
+          typeof data === 'object' &&
+          'success' in data &&
+          'data' in data
+        ) {
           return {
             ...data,
             message: data.message || 'Success',

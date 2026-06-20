@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  Query,
+} from '@nestjs/common';
 import { NoteFoldersService } from './note-folders.service';
 import { CreateNoteFolderDto } from './dto/create-note-folder.dto';
 import { UpdateNoteFolderDto } from './dto/update-note-folder.dto';
@@ -12,7 +22,10 @@ export class NoteFoldersController {
   constructor(private readonly noteFoldersService: NoteFoldersService) {}
 
   @Post()
-  create(@CurrentUser() user: User, @Body() createNoteFolderDto: CreateNoteFolderDto) {
+  create(
+    @CurrentUser() user: User,
+    @Body() createNoteFolderDto: CreateNoteFolderDto,
+  ) {
     return this.noteFoldersService.create(user.id, createNoteFolderDto);
   }
 

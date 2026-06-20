@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+} from '@nestjs/common';
 import { TaskColumnsService } from './task-columns.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -18,13 +27,14 @@ const UpdateColumnSchema = z.object({
 export class UpdateTaskColumnDto extends createZodDto(UpdateColumnSchema) {}
 
 const ReorderColumnsSchema = z.object({
-  columns: z.array(z.object({
-    id: z.string(),
-    order: z.number(),
-  })),
+  columns: z.array(
+    z.object({
+      id: z.string(),
+      order: z.number(),
+    }),
+  ),
 });
 export class ReorderColumnsDto extends createZodDto(ReorderColumnsSchema) {}
-
 
 @Controller('api/task-columns')
 @UseGuards(JwtAuthGuard)

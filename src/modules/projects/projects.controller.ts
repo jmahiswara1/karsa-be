@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { ProjectsService } from './projects.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
@@ -13,8 +23,14 @@ export class ProjectsController {
   constructor(private readonly projectsService: ProjectsService) {}
 
   @Post()
-  async create(@CurrentUser() user: User, @Body() createProjectDto: CreateProjectDto) {
-    const project = await this.projectsService.create(user.id, createProjectDto);
+  async create(
+    @CurrentUser() user: User,
+    @Body() createProjectDto: CreateProjectDto,
+  ) {
+    const project = await this.projectsService.create(
+      user.id,
+      createProjectDto,
+    );
     return {
       success: true,
       message: 'Project created successfully',
@@ -25,9 +41,17 @@ export class ProjectsController {
   @Get()
   async findAll(@CurrentUser() user: User, @Query() query: ProjectQueryDto) {
     try {
-      console.log('[ProjectsController] findAll -> user:', user.id, 'query:', query);
+      console.log(
+        '[ProjectsController] findAll -> user:',
+        user.id,
+        'query:',
+        query,
+      );
       const result = await this.projectsService.findAll(user.id, query);
-      console.log('[ProjectsController] result data length:', result.data.length);
+      console.log(
+        '[ProjectsController] result data length:',
+        result.data.length,
+      );
       return {
         success: true,
         message: 'Projects retrieved successfully',
@@ -58,7 +82,11 @@ export class ProjectsController {
     @Param('id') id: string,
     @Body() updateProjectDto: UpdateProjectDto,
   ) {
-    const project = await this.projectsService.update(user.id, id, updateProjectDto);
+    const project = await this.projectsService.update(
+      user.id,
+      id,
+      updateProjectDto,
+    );
     return {
       success: true,
       message: 'Project updated successfully',

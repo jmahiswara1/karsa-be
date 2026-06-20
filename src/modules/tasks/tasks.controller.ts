@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { TasksService } from './tasks.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
@@ -13,7 +23,10 @@ export class TasksController {
   constructor(private readonly tasksService: TasksService) {}
 
   @Post()
-  async create(@CurrentUser() user: User, @Body() createTaskDto: CreateTaskDto) {
+  async create(
+    @CurrentUser() user: User,
+    @Body() createTaskDto: CreateTaskDto,
+  ) {
     const task = await this.tasksService.create(user.id, createTaskDto);
     return {
       success: true,
@@ -68,7 +81,10 @@ export class TasksController {
   @Post('reorder')
   async reorder(
     @CurrentUser() user: User,
-    @Body() dto: { tasks: { id: string; order: number; columnId?: string; status?: any }[] }
+    @Body()
+    dto: {
+      tasks: { id: string; order: number; columnId?: string; status?: any }[];
+    },
   ) {
     await this.tasksService.reorder(user.id, dto.tasks);
     return {
