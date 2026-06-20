@@ -17,6 +17,7 @@ import { NoteFoldersModule } from './modules/note-folders/note-folders.module';
 import { AssistantModule } from './modules/assistant/assistant.module';
 import { PlannerModule } from './modules/planner/planner.module';
 
+import { AdminModule } from './modules/admin/admin.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -46,6 +47,7 @@ import { PlannerModule } from './modules/planner/planner.module';
     NoteFoldersModule,
     AssistantModule,
     PlannerModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [

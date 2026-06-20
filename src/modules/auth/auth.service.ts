@@ -9,7 +9,10 @@ import type { Profile } from 'passport-google-oauth20';
 export interface JwtPayload {
   sub: string;
   email: string;
+  role: UserRole;
 }
+
+export type UserRole = User['role'];
 
 @Injectable()
 export class AuthService {
@@ -42,8 +45,8 @@ export class AuthService {
     return user;
   }
 
-  async generateTokens(userId: string, email: string) {
-    const payload: JwtPayload = { sub: userId, email };
+  async generateTokens(userId: string, email: string, role: UserRole) {
+    const payload: JwtPayload = { sub: userId, email, role };
 
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, {
@@ -51,14 +54,14 @@ export class AuthService {
         expiresIn: this.configService.get<string>(
           'JWT_ACCESS_EXPIRES_IN',
           '15m',
-        ) as any,
+        ),
       }),
       this.jwtService.signAsync(payload, {
         secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
         expiresIn: this.configService.get<string>(
           'JWT_REFRESH_EXPIRES_IN',
           '7d',
-        ) as any,
+        ),
       }),
     ]);
 
@@ -93,6 +96,6 @@ export class AuthService {
       throw new UnauthorizedException('Access denied');
     }
 
-    return this.generateTokens(user.id, user.email);
+    return this.generateTokens(user.id, user.email, user.role);
   }
 }

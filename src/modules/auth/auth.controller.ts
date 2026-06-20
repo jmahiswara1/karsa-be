@@ -24,7 +24,11 @@ export class AuthController {
     @Res() res: Response,
   ) {
     const user = req.user as User;
-    const tokens = await this.authService.generateTokens(user.id, user.email);
+    const tokens = await this.authService.generateTokens(
+      user.id,
+      user.email,
+      user.role,
+    );
 
     // Redirect to frontend with tokens (in production, use secure HttpOnly cookies)
     const frontendUrl = process.env.CORS_ORIGIN || 'http://localhost:3000';

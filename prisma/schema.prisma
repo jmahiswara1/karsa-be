@@ -48,6 +48,12 @@ enum ConversationType {
   MINI
 }
 
+enum UserRole {
+  FREE
+  PRO
+  ADMIN
+}
+
 model User {
   id                 String   @id @default(uuid())
   email              String   @unique
@@ -57,6 +63,8 @@ model User {
   avatarUrl          String?
   hashedRefreshToken String?
   createdAt          DateTime @default(now())
+  role                UserRole   @default(FREE)
+  subscriptionExpiresAt DateTime?
   updatedAt          DateTime @updatedAt
 
   projects      Project[]
@@ -73,6 +81,8 @@ model User {
   noteFolders   NoteFolder[]
   plannerEntries PlannerEntry[]
   conversations Conversation[]
+
+  @@index([role])
 }
 
 model Tag {
