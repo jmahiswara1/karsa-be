@@ -49,6 +49,9 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   get plannerEntry() {
     return this.client.plannerEntry;
   }
+  get syncLog() {
+    return this.client.syncLog;
+  }
   get conversation() {
     return this.client.conversation;
   }

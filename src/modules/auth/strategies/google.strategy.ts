@@ -16,8 +16,14 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
       clientSecret:
         configService.get<string>('GOOGLE_CLIENT_SECRET') || 'dummy-secret',
       callbackURL: configService.get<string>('GOOGLE_CALLBACK_URL'),
-      scope: ['email', 'profile'],
-    });
+      scope: [
+        'email',
+        'profile',
+        'https://www.googleapis.com/auth/calendar.events',
+      ],
+      accessType: 'offline',
+      approvalPrompt: 'force',
+    } as any);
   }
 
   async validate(
@@ -27,7 +33,11 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     done: VerifyCallback,
   ): Promise<void> {
     try {
-      const user = await this.authService.validateGoogleUser(profile);
+      const user = await this.authService.validateGoogleUser(
+        profile,
+        accessToken,
+        refreshToken,
+      );
       done(null, user);
     } catch (err) {
       done(err, false);

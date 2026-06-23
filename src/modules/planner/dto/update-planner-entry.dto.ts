@@ -1,4 +1,8 @@
-import { IsString, IsOptional, IsBoolean } from 'class-validator';
+import { IsString, IsOptional, IsBoolean, IsIn } from 'class-validator';
+import {
+  PLANNER_CATEGORIES,
+  type PlannerCategory,
+} from './create-planner-entry.dto';
 
 export class UpdatePlannerEntryDto {
   @IsOptional()
@@ -20,6 +24,11 @@ export class UpdatePlannerEntryDto {
   @IsOptional()
   @IsString()
   endTime?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsIn(PLANNER_CATEGORIES)
+  category?: PlannerCategory;
 
   @IsOptional()
   @IsString()

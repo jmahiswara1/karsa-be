@@ -8,10 +8,12 @@ import {
   Param,
   Query,
   UseGuards,
+  Logger,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { PlannerService } from './planner.service';
+import { GoogleCalendarService } from '../google-calendar/google-calendar.service';
 import { GeneratePlanDto } from './dto/generate-plan.dto';
 import { CreatePlannerEntryDto } from './dto/create-planner-entry.dto';
 import { UpdatePlannerEntryDto } from './dto/update-planner-entry.dto';
@@ -19,7 +21,12 @@ import { UpdatePlannerEntryDto } from './dto/update-planner-entry.dto';
 @Controller('api/planner')
 @UseGuards(JwtAuthGuard)
 export class PlannerController {
-  constructor(private readonly plannerService: PlannerService) {}
+  private readonly logger = new Logger(PlannerController.name);
+
+  constructor(
+    private readonly plannerService: PlannerService,
+    private readonly googleCalendarService: GoogleCalendarService,
+  ) {}
 
   // ── CRUD ──────────────────────────────────────────
 
@@ -67,7 +74,18 @@ export class PlannerController {
   @Delete('entries/:id')
   async remove(@CurrentUser() user: { id: string }, @Param('id') id: string) {
     const result = await this.plannerService.remove(user.id, id);
-    return { success: true, data: result };
+    // Also delete the event from Google Calendar if it was synced
+    if (result.googleEventId) {
+      try {
+        await this.googleCalendarService.deleteEvent(
+          user.id,
+          result.googleEventId,
+        );
+      } catch (error) {
+        this.logger.warn('Failed to delete Google Calendar event:', error);
+      }
+    }
+    return { success: true, data: { deleted: true } };
   }
 
   // ── AI Generate ────────────────────────────────────

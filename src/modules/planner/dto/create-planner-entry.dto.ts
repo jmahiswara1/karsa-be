@@ -1,4 +1,14 @@
-import { IsString, IsOptional, IsBoolean } from 'class-validator';
+import { IsString, IsOptional, IsBoolean, IsIn } from 'class-validator';
+
+export const PLANNER_CATEGORIES = [
+  'FOCUS',
+  'BREAK',
+  'MEETING',
+  'PERSONAL',
+  'OTHER',
+] as const;
+
+export type PlannerCategory = (typeof PLANNER_CATEGORIES)[number];
 
 export class CreatePlannerEntryDto {
   @IsString()
@@ -16,6 +26,11 @@ export class CreatePlannerEntryDto {
 
   @IsString()
   endTime: string;
+
+  @IsOptional()
+  @IsString()
+  @IsIn(PLANNER_CATEGORIES)
+  category?: PlannerCategory;
 
   @IsOptional()
   @IsString()

@@ -11,6 +11,7 @@ interface PlannerEntryData {
   date: string;
   startTime: string;
   endTime: string;
+  category?: string;
   taskId?: string;
   isAiGenerated?: boolean;
   aiReason?: string;
@@ -54,6 +55,7 @@ export class PlannerService {
         date: new Date(dto.date),
         startTime: dto.startTime,
         endTime: dto.endTime,
+        category: dto.category ?? 'FOCUS',
         taskId: dto.taskId ?? null,
         isAiGenerated: dto.isAiGenerated ?? false,
         aiReason: dto.aiReason ?? null,
@@ -80,9 +82,13 @@ export class PlannerService {
         lt: new Date(d.getTime() + 24 * 60 * 60 * 1000),
       };
     } else if (startDate && endDate) {
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(endDate);
+      end.setHours(0, 0, 0, 0);
       where.date = {
-        gte: new Date(startDate),
-        lte: new Date(endDate),
+        gte: start,
+        lt: new Date(end.getTime() + 24 * 60 * 60 * 1000),
       };
     }
 
@@ -123,10 +129,21 @@ export class PlannerService {
     if (dto.date !== undefined) data.date = new Date(dto.date);
     if (dto.startTime !== undefined) data.startTime = dto.startTime;
     if (dto.endTime !== undefined) data.endTime = dto.endTime;
+    if (dto.category !== undefined) data.category = dto.category;
     if (dto.taskId !== undefined) data.taskId = dto.taskId;
     if (dto.isAiGenerated !== undefined) data.isAiGenerated = dto.isAiGenerated;
     if (dto.aiReason !== undefined) data.aiReason = dto.aiReason;
     if (dto.color !== undefined) data.color = dto.color;
+
+    // Reset googleEventId when title/date/time changes so next sync updates Google Calendar
+    if (
+      dto.title !== undefined ||
+      dto.date !== undefined ||
+      dto.startTime !== undefined ||
+      dto.endTime !== undefined
+    ) {
+      data.googleEventId = null;
+    }
 
     return this.prisma.plannerEntry.update({
       where: { id },
@@ -147,7 +164,7 @@ export class PlannerService {
     if (!entry) throw new NotFoundException('Planner entry not found');
 
     await this.prisma.plannerEntry.delete({ where: { id } });
-    return { deleted: true };
+    return { deleted: true, googleEventId: entry.googleEventId };
   }
 
   async generate(
@@ -189,12 +206,16 @@ export class PlannerService {
 
     // Delete previous AI-generated entries
     if (startDate && endDate) {
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(endDate);
+      end.setHours(0, 0, 0, 0);
       await this.prisma.plannerEntry.deleteMany({
         where: {
           userId,
           date: {
-            gte: new Date(startDate),
-            lte: new Date(endDate),
+            gte: start,
+            lt: new Date(end.getTime() + 24 * 60 * 60 * 1000),
           },
           isAiGenerated: true,
         },
@@ -211,13 +232,32 @@ export class PlannerService {
     }
 
     // Create new entries from AI blocks
+    const rangeDays =
+      startDate && endDate
+        ? Math.max(
+            1,
+            Math.round(
+              (new Date(endDate).getTime() - new Date(startDate).getTime()) /
+                (24 * 60 * 60 * 1000),
+            ) + 1,
+          )
+        : 1;
     const created = await Promise.all(
       aiResult.blocks.map((block, i) => {
-        const blockDate = block.date
-          ? new Date(block.date)
-          : date
-            ? new Date(date)
-            : this.startOfToday();
+        let blockDate: Date;
+        if (block.date) {
+          blockDate = new Date(block.date);
+        } else if (startDate && endDate) {
+          const rangeStart = new Date(startDate);
+          rangeStart.setHours(0, 0, 0, 0);
+          blockDate = new Date(
+            rangeStart.getTime() + (i % rangeDays) * 24 * 60 * 60 * 1000,
+          );
+        } else if (date) {
+          blockDate = new Date(date);
+        } else {
+          blockDate = this.startOfToday();
+        }
         return this.prisma.plannerEntry.create({
           data: {
             userId,
@@ -308,5 +348,29 @@ export class PlannerService {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
     return d;
+  }
+
+  async setGoogleEventId(
+    userId: string,
+    entryId: string,
+    eventId: string | null,
+  ) {
+    const entry = await this.prisma.plannerEntry.findFirst({
+      where: { id: entryId, userId },
+    });
+    if (!entry) throw new NotFoundException('Planner entry not found');
+
+    return this.prisma.plannerEntry.update({
+      where: { id: entryId },
+      data: { googleEventId: eventId },
+    });
+  }
+
+  async clearAllGoogleEventIds(userId: string) {
+    const result = await this.prisma.plannerEntry.updateMany({
+      where: { userId, googleEventId: { not: null } },
+      data: { googleEventId: null },
+    });
+    return result.count;
   }
 }

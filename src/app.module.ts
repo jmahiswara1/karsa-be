@@ -18,6 +18,7 @@ import { AssistantModule } from './modules/assistant/assistant.module';
 import { PlannerModule } from './modules/planner/planner.module';
 
 import { AdminModule } from './modules/admin/admin.module';
+import { GoogleCalendarModule } from './modules/google-calendar/google-calendar.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -48,6 +49,7 @@ import { AdminModule } from './modules/admin/admin.module';
     AssistantModule,
     PlannerModule,
     AdminModule,
+    GoogleCalendarModule,
   ],
   controllers: [AppController],
   providers: [

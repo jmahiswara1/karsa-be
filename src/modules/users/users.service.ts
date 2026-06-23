@@ -45,6 +45,20 @@ export class UsersService {
     });
   }
 
+  async updateCalendarTokens(
+    userId: string,
+    accessToken: string,
+    refreshToken: string,
+  ): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        googleCalendarToken: accessToken,
+        googleCalendarRefreshToken: refreshToken,
+      },
+    });
+  }
+
   update(
     id: string,
     data: { name?: string; avatarUrl?: string },

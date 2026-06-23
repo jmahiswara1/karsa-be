@@ -22,7 +22,11 @@ export class AuthService {
     private configService: ConfigService,
   ) {}
 
-  async validateGoogleUser(profile: Profile): Promise<User> {
+  async validateGoogleUser(
+    profile: Profile,
+    accessToken?: string,
+    refreshToken?: string,
+  ): Promise<User> {
     const { id, emails, displayName, photos } = profile;
     const email = emails?.[0]?.value || '';
     const avatarUrl = photos?.[0]?.value;
@@ -42,6 +46,16 @@ export class AuthService {
         });
       }
     }
+
+    // Store Google Calendar tokens if provided
+    if (accessToken) {
+      await this.usersService.updateCalendarTokens(
+        user.id,
+        accessToken,
+        refreshToken ?? '',
+      );
+    }
+
     return user;
   }
 
@@ -54,14 +68,14 @@ export class AuthService {
         expiresIn: this.configService.get<string>(
           'JWT_ACCESS_EXPIRES_IN',
           '15m',
-        ),
+        ) as unknown as number,
       }),
       this.jwtService.signAsync(payload, {
         secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
         expiresIn: this.configService.get<string>(
           'JWT_REFRESH_EXPIRES_IN',
           '7d',
-        ),
+        ) as unknown as number,
       }),
     ]);
 
