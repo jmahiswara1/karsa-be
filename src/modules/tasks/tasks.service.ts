@@ -104,7 +104,7 @@ export class TasksService {
 
   async reorder(
     userId: string,
-    tasks: { id: string; order: number; columnId?: string; status?: any }[],
+    tasks: { id: string; order: number; columnId?: string; status?: string }[],
   ) {
     // Reorder bulk update
     const updates = tasks.map((task) =>
@@ -118,5 +118,55 @@ export class TasksService {
       }),
     );
     await this.prisma.$transaction(updates);
+  }
+
+  async setGoogleEventId(
+    userId: string,
+    taskId: string,
+    eventId: string | null,
+  ) {
+    const task = await this.findOne(userId, taskId);
+    if (!task) throw new NotFoundException(`Task ${taskId} not found`);
+
+    return this.prisma.task.update({
+      where: { id: taskId },
+      data: {
+        googleEventId: eventId,
+        googleSyncedAt: eventId ? new Date() : null,
+      },
+    });
+  }
+
+  async clearAllGoogleEventIds(userId: string) {
+    const result = await this.prisma.task.updateMany({
+      where: { userId, googleEventId: { not: null } },
+      data: { googleEventId: null, googleSyncedAt: null },
+    });
+    return result.count;
+  }
+
+  async findForSync(userId: string, startDate: string, endDate: string) {
+    const start = new Date(startDate);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+
+    return this.prisma.task.findMany({
+      where: {
+        userId,
+        deadline: { gte: start, lte: end },
+        status: { notIn: ['DONE', 'CANCELLED'] },
+      },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        deadline: true,
+        priority: true,
+        googleEventId: true,
+        project: { select: { id: true, title: true } },
+      },
+      orderBy: [{ deadline: 'asc' }, { priority: 'desc' }],
+    });
   }
 }
