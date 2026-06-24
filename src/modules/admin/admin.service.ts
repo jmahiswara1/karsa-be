@@ -3,10 +3,14 @@ import { PrismaService } from '../../database/prisma.service';
 import type { User, UserStatus } from '@prisma/client';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { UpdateStatusDto } from './dto/update-status.dto';
+import { AuditLogService } from './audit-log.service';
 
 @Injectable()
 export class AdminService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private auditLog: AuditLogService,
+  ) {}
 
   async getStats() {
     const [total, pending, active, rejected, free, pro, admin] =
@@ -142,6 +146,7 @@ export class AdminService {
   }
 
   async approveUser(
+    adminUserId: string,
     userId: string,
   ): Promise<{ id: string; name: string; email: string; status: UserStatus }> {
     const existing = await this.prisma.user.findUnique({
@@ -151,14 +156,24 @@ export class AdminService {
       throw new NotFoundException('User not found');
     }
 
-    return this.prisma.user.update({
+    const updated = await this.prisma.user.update({
       where: { id: userId },
       data: { status: 'ACTIVE' },
       select: { id: true, name: true, email: true, status: true },
     });
+
+    await this.auditLog.log({
+      adminUserId,
+      action: 'APPROVE',
+      targetUserId: userId,
+      details: { previousStatus: existing.status },
+    });
+
+    return updated;
   }
 
   async rejectUser(
+    adminUserId: string,
     userId: string,
   ): Promise<{ id: string; name: string; email: string; status: UserStatus }> {
     const existing = await this.prisma.user.findUnique({
@@ -168,14 +183,24 @@ export class AdminService {
       throw new NotFoundException('User not found');
     }
 
-    return this.prisma.user.update({
+    const updated = await this.prisma.user.update({
       where: { id: userId },
       data: { status: 'REJECTED' },
       select: { id: true, name: true, email: true, status: true },
     });
+
+    await this.auditLog.log({
+      adminUserId,
+      action: 'REJECT',
+      targetUserId: userId,
+      details: { previousStatus: existing.status },
+    });
+
+    return updated;
   }
 
   async updateUserRole(
+    adminUserId: string,
     userId: string,
     dto: UpdateRoleDto,
   ): Promise<{
@@ -192,7 +217,7 @@ export class AdminService {
       throw new NotFoundException('User not found');
     }
 
-    return this.prisma.user.update({
+    const updated = await this.prisma.user.update({
       where: { id: userId },
       data: {
         role: dto.role,
@@ -210,9 +235,19 @@ export class AdminService {
         subscriptionExpiresAt: true,
       },
     });
+
+    await this.auditLog.log({
+      adminUserId,
+      action: 'UPDATE_ROLE',
+      targetUserId: userId,
+      details: { previousRole: existing.role, newRole: dto.role },
+    });
+
+    return updated;
   }
 
   async updateUserStatus(
+    adminUserId: string,
     userId: string,
     dto: UpdateStatusDto,
   ): Promise<{ id: string; name: string; email: string; status: UserStatus }> {
@@ -223,20 +258,42 @@ export class AdminService {
       throw new NotFoundException('User not found');
     }
 
-    return this.prisma.user.update({
+    const updated = await this.prisma.user.update({
       where: { id: userId },
       data: { status: dto.status },
       select: { id: true, name: true, email: true, status: true },
     });
+
+    await this.auditLog.log({
+      adminUserId,
+      action: 'UPDATE_STATUS',
+      targetUserId: userId,
+      details: { previousStatus: existing.status, newStatus: dto.status },
+    });
+
+    return updated;
   }
 
-  async deleteUser(userId: string): Promise<{ id: string }> {
+  async deleteUser(
+    adminUserId: string,
+    userId: string,
+  ): Promise<{ id: string }> {
     const existing = await this.prisma.user.findUnique({
       where: { id: userId },
     });
     if (!existing) {
       throw new NotFoundException('User not found');
     }
+
+    await this.auditLog.log({
+      adminUserId,
+      action: 'DELETE',
+      targetUserId: userId,
+      details: {
+        deletedUserEmail: existing.email,
+        deletedUserName: existing.name,
+      },
+    });
 
     await this.prisma.user.delete({ where: { id: userId } });
     return { id: userId };

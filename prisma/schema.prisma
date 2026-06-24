@@ -60,6 +60,16 @@ enum UserStatus {
   REJECTED
 }
 
+enum AuditAction {
+  APPROVE
+  REJECT
+  DELETE
+  UPDATE_ROLE
+  UPDATE_STATUS
+  GENERATE_INVITE
+  REVOKE_INVITE
+}
+
 model User {
   id                 String   @id @default(uuid())
   email              String   @unique
@@ -91,6 +101,8 @@ model User {
   plannerEntries PlannerEntry[]
   conversations Conversation[]
   syncLogs      SyncLog[]
+  auditLogsAsAdmin  AdminAuditLog[] @relation("AuditAdmin")
+  auditLogsAsTarget AdminAuditLog[] @relation("AuditTarget")
 
   @@index([role])
   @@index([status])
@@ -303,6 +315,22 @@ model ActivityLog {
   userId     String
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AdminAuditLog {
+  id            String      @id @default(uuid())
+  action        AuditAction
+  targetUserId  String?
+  details       Json?
+  createdAt     DateTime    @default(now())
+  adminUserId   String
+
+  adminUser  User  @relation("AuditAdmin", fields: [adminUserId], references: [id], onDelete: Cascade)
+  targetUser User? @relation("AuditTarget", fields: [targetUserId], references: [id], onDelete: SetNull)
+
+  @@index([adminUserId])
+  @@index([targetUserId])
+  @@index([createdAt])
 }
 
 model Notification {

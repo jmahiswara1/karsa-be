@@ -12,21 +12,47 @@ import { SkipThrottle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AdminService } from './admin.service';
+import { AuditLogService } from './audit-log.service';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { UpdateStatusDto } from './dto/update-status.dto';
+import type { User, AuditAction } from '@prisma/client';
 
 @Controller('api/admin')
 @SkipThrottle()
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('ADMIN')
 export class AdminController {
-  constructor(private readonly adminService: AdminService) {}
+  constructor(
+    private readonly adminService: AdminService,
+    private readonly auditLogService: AuditLogService,
+  ) {}
 
   @Get('stats')
   async getStats() {
     const stats = await this.adminService.getStats();
     return { success: true, data: stats };
+  }
+
+  @Get('audit-logs')
+  async listAuditLogs(
+    @Query('skip') skip?: string,
+    @Query('take') take?: string,
+    @Query('action') action?: AuditAction,
+    @Query('adminUserId') adminUserId?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    const result = await this.auditLogService.list({
+      skip: skip ? Number(skip) : undefined,
+      take: take ? Number(take) : undefined,
+      action,
+      adminUserId,
+      from,
+      to,
+    });
+    return { success: true, data: result.items, meta: { total: result.total } };
   }
 
   @Get('users')
@@ -44,11 +70,7 @@ export class AdminController {
       role,
       status,
     });
-    return {
-      success: true,
-      data: result.items,
-      meta: { total: result.total },
-    };
+    return { success: true, data: result.items, meta: { total: result.total } };
   }
 
   @Get('users/pending')
@@ -64,32 +86,40 @@ export class AdminController {
   }
 
   @Patch('users/:id/approve')
-  async approveUser(@Param('id') id: string) {
-    const updated = await this.adminService.approveUser(id);
+  async approveUser(@CurrentUser() admin: User, @Param('id') id: string) {
+    const updated = await this.adminService.approveUser(admin.id, id);
     return { success: true, data: updated, message: 'User approved' };
   }
 
   @Patch('users/:id/reject')
-  async rejectUser(@Param('id') id: string) {
-    const updated = await this.adminService.rejectUser(id);
+  async rejectUser(@CurrentUser() admin: User, @Param('id') id: string) {
+    const updated = await this.adminService.rejectUser(admin.id, id);
     return { success: true, data: updated, message: 'User rejected' };
   }
 
   @Patch('users/:id/role')
-  async updateRole(@Param('id') id: string, @Body() dto: UpdateRoleDto) {
-    const updated = await this.adminService.updateUserRole(id, dto);
+  async updateRole(
+    @CurrentUser() admin: User,
+    @Param('id') id: string,
+    @Body() dto: UpdateRoleDto,
+  ) {
+    const updated = await this.adminService.updateUserRole(admin.id, id, dto);
     return { success: true, data: updated, message: 'User role updated' };
   }
 
   @Patch('users/:id/status')
-  async updateStatus(@Param('id') id: string, @Body() dto: UpdateStatusDto) {
-    const updated = await this.adminService.updateUserStatus(id, dto);
+  async updateStatus(
+    @CurrentUser() admin: User,
+    @Param('id') id: string,
+    @Body() dto: UpdateStatusDto,
+  ) {
+    const updated = await this.adminService.updateUserStatus(admin.id, id, dto);
     return { success: true, data: updated, message: 'User status updated' };
   }
 
   @Delete('users/:id')
-  async deleteUser(@Param('id') id: string) {
-    const result = await this.adminService.deleteUser(id);
+  async deleteUser(@CurrentUser() admin: User, @Param('id') id: string) {
+    const result = await this.adminService.deleteUser(admin.id, id);
     return { success: true, data: result, message: 'User deleted' };
   }
 }
