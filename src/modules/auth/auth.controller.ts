@@ -24,14 +24,34 @@ export class AuthController {
     @Res() res: Response,
   ) {
     const user = req.user as User;
+    const frontendUrl = process.env.CORS_ORIGIN || 'http://localhost:3000';
+
+    if (user.status === 'PENDING') {
+      const pendingUser = JSON.stringify({
+        name: user.name || '',
+        email: user.email,
+        avatarUrl: user.avatarUrl || '',
+      });
+      res.cookie('pending_user', pendingUser, {
+        maxAge: 10 * 60 * 1000, // 10 minutes
+        httpOnly: false,
+        sameSite: 'lax',
+        path: '/',
+      });
+      return res.redirect(`${frontendUrl}/callback?pending=true`);
+    }
+
+    if (user.status === 'REJECTED') {
+      return res.redirect(`${frontendUrl}/callback?rejected=true`);
+    }
+
     const tokens = await this.authService.generateTokens(
       user.id,
       user.email,
       user.role,
     );
 
-    // Redirect to frontend with tokens (in production, use secure HttpOnly cookies)
-    const frontendUrl = process.env.CORS_ORIGIN || 'http://localhost:3000';
+    // Redirect to frontend with tokens
     res.redirect(
       `${frontendUrl}/callback?access_token=${tokens.accessToken}&refresh_token=${tokens.refreshToken}`,
     );

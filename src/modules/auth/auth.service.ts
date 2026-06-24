@@ -32,17 +32,22 @@ export class AuthService {
     const avatarUrl = photos?.[0]?.value;
 
     let user = await this.usersService.findByGoogleId(id);
+
     if (!user) {
       user = await this.usersService.findByEmail(email);
       if (user) {
         // Link google account to existing email
         // Implement logic to update user with googleId if needed, skipping for now
       } else {
+        const userCount = await this.usersService.count();
+        const status = userCount === 0 ? 'ACTIVE' : 'PENDING';
+
         user = await this.usersService.createFromGoogle({
           email,
           name: displayName,
           googleId: id,
           avatarUrl,
+          status,
         });
       }
     }

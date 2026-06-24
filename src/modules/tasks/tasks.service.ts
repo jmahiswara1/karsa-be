@@ -30,11 +30,7 @@ export class TasksService {
       ...(priority && { priority }),
       ...(projectId && { projectId }),
       ...(columnId && { columnId }),
-      ...(deadline && {
-        deadline: {
-          lte: new Date(deadline), // example for 'before this deadline'
-        },
-      }),
+      ...(deadline && this.buildDeadlineFilter(deadline)),
       ...(search && {
         OR: [
           { title: { contains: search, mode: 'insensitive' } },
@@ -54,6 +50,9 @@ export class TasksService {
           project: {
             select: { id: true, title: true },
           },
+          column: {
+            select: { id: true, name: true, isSystem: true },
+          },
         },
       }),
       this.prisma.task.count({ where }),
@@ -66,6 +65,62 @@ export class TasksService {
         limit,
         total,
         totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  private buildDeadlineFilter(deadline: string): Prisma.TaskWhereInput {
+    if (deadline === 'today') {
+      return {
+        status: { notIn: ['DONE', 'CANCELLED'] },
+        column: { isSystem: true },
+        OR: [{ deadline: { lte: new Date() } }, { deadline: null }],
+      };
+    }
+
+    if (deadline === 'tomorrow') {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const startOfDay = new Date(
+        tomorrow.getFullYear(),
+        tomorrow.getMonth(),
+        tomorrow.getDate(),
+      );
+      const endOfDay = new Date(
+        tomorrow.getFullYear(),
+        tomorrow.getMonth(),
+        tomorrow.getDate(),
+        23,
+        59,
+        59,
+        999,
+      );
+      return {
+        deadline: {
+          gte: startOfDay,
+          lte: endOfDay,
+        },
+      };
+    }
+
+    if (deadline === 'overdue') {
+      const now = new Date();
+      const startOfDay = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate(),
+      );
+      return {
+        deadline: {
+          lt: startOfDay,
+        },
+      };
+    }
+
+    // Default: treat as a specific date (before this date)
+    return {
+      deadline: {
+        lte: new Date(deadline),
       },
     };
   }
@@ -107,16 +162,15 @@ export class TasksService {
     tasks: { id: string; order: number; columnId?: string; status?: string }[],
   ) {
     // Reorder bulk update
-    const updates = tasks.map((task) =>
-      this.prisma.task.update({
+    const updates = tasks.map((task) => {
+      const data: Record<string, unknown> = { order: task.order };
+      if (task.columnId !== undefined) data.columnId = task.columnId;
+      if (task.status !== undefined) data.status = task.status;
+      return this.prisma.task.update({
         where: { id: task.id, userId },
-        data: {
-          order: task.order,
-          ...(task.columnId !== undefined && { columnId: task.columnId }),
-          ...(task.status !== undefined && { status: task.status }),
-        },
-      }),
-    );
+        data,
+      });
+    });
     await this.prisma.$transaction(updates);
   }
 

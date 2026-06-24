@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
-import type { User, UserPreference } from '@prisma/client';
+import type { User, UserPreference, UserStatus } from '@prisma/client';
 import { UpdatePreferenceDto } from './dto/update-preference.dto';
 
 @Injectable()
@@ -19,11 +19,23 @@ export class UsersService {
     return this.prisma.user.findUnique({ where: { googleId } });
   }
 
+  async count(): Promise<number> {
+    return this.prisma.user.count();
+  }
+
+  async updateStatus(userId: string, status: UserStatus): Promise<User> {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { status },
+    });
+  }
+
   createFromGoogle(googleUser: {
     email: string;
     name: string;
     googleId: string;
     avatarUrl?: string;
+    status?: UserStatus;
   }): Promise<User> {
     return this.prisma.user.create({
       data: {
@@ -31,6 +43,7 @@ export class UsersService {
         name: googleUser.name,
         googleId: googleUser.googleId,
         avatarUrl: googleUser.avatarUrl,
+        status: googleUser.status ?? 'PENDING',
       },
     });
   }
