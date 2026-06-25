@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
@@ -10,6 +11,9 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
+  const isProduction = configService.get<string>('NODE_ENV') === 'production';
+
+  app.use(helmet());
 
   app.enableCors({
     origin: configService.get<string>('CORS_ORIGIN', 'http://localhost:3000'),
@@ -23,16 +27,17 @@ async function bootstrap() {
   );
   app.useGlobalPipes(new ZodValidationPipe());
 
-  // Setup Swagger API Documentation
-
-  const config = new DocumentBuilder()
-    .setTitle('Karsa API')
-    .setDescription('Dokumentasi API untuk Karsa Backend')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .build();
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('docs', app, document);
+  // Setup Swagger API Documentation (only in non-production)
+  if (!isProduction) {
+    const config = new DocumentBuilder()
+      .setTitle('Karsa API')
+      .setDescription('Dokumentasi API untuk Karsa Backend')
+      .setVersion('1.0')
+      .addBearerAuth()
+      .build();
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('docs', app, document);
+  }
 
   await app.listen(process.env.PORT ?? 3001);
 }
