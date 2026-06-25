@@ -86,7 +86,10 @@ export class AssistantService {
 
     let aiUrl = process.env.AI_SERVICE_URL || 'http://127.0.0.1:8000';
     aiUrl = aiUrl.replace('localhost', '127.0.0.1');
-    const aiToken = process.env.AI_SERVICE_TOKEN || 'gadangganteng';
+    const aiToken = process.env.AI_SERVICE_TOKEN;
+    if (!aiToken) {
+      throw new Error('AI_SERVICE_TOKEN environment variable is not set');
+    }
 
     try {
       const response = await fetch(`${aiUrl}/api/assistant/chat`, {
@@ -158,7 +161,10 @@ export class AssistantService {
 
     let aiUrl = process.env.AI_SERVICE_URL || 'http://127.0.0.1:8000';
     aiUrl = aiUrl.replace('localhost', '127.0.0.1');
-    const aiToken = process.env.AI_SERVICE_TOKEN || 'gadangganteng';
+    const aiToken = process.env.AI_SERVICE_TOKEN;
+    if (!aiToken) {
+      throw new Error('AI_SERVICE_TOKEN environment variable is not set');
+    }
 
     let aiResponse: AiResponse;
     try {

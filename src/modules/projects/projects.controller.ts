@@ -40,30 +40,12 @@ export class ProjectsController {
 
   @Get()
   async findAll(@CurrentUser() user: User, @Query() query: ProjectQueryDto) {
-    try {
-      console.log(
-        '[ProjectsController] findAll -> user:',
-        user.id,
-        'query:',
-        query,
-      );
-      const result = await this.projectsService.findAll(user.id, query);
-      console.log(
-        '[ProjectsController] result data length:',
-        result.data.length,
-      );
-      return {
-        success: true,
-        message: 'Projects retrieved successfully',
-        ...result,
-      };
-    } catch (err: any) {
-      return {
-        success: false,
-        message: err.message,
-        stack: err.stack,
-      };
-    }
+    const result = await this.projectsService.findAll(user.id, query);
+    return {
+      success: true,
+      message: 'Projects retrieved successfully',
+      ...result,
+    };
   }
 
   @Get(':id')

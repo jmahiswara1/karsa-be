@@ -304,7 +304,10 @@ export class PlannerService {
   ): Promise<AiPlanResponse> {
     let aiUrl = process.env.AI_SERVICE_URL || 'http://127.0.0.1:8000';
     aiUrl = aiUrl.replace('localhost', '127.0.0.1');
-    const aiToken = process.env.AI_SERVICE_TOKEN || 'gadangganteng';
+    const aiToken = process.env.AI_SERVICE_TOKEN;
+    if (!aiToken) {
+      throw new Error('AI_SERVICE_TOKEN environment variable is not set');
+    }
 
     const taskList = tasks.map((t) => ({
       id: t.id,
