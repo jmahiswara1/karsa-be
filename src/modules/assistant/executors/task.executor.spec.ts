@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment */
 import { TaskExecutor } from './task.executor';
 import { ExecutorContext } from './base.executor';
 import { PrismaService } from '../../../database/prisma.service';
