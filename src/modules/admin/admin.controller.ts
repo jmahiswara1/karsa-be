@@ -9,7 +9,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { SkipThrottle } from '@nestjs/throttler';
+import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -23,7 +23,7 @@ import { GenerateInviteDto } from './dto/generate-invite.dto';
 import type { User, AuditAction } from '@prisma/client';
 
 @Controller('api/admin')
-@SkipThrottle()
+@Throttle({ default: { ttl: 60000, limit: 120 } })
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('ADMIN')
 export class AdminController {

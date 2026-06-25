@@ -68,9 +68,17 @@ export class AuthController {
   @Get('me')
   @UseGuards(JwtAuthGuard)
   getProfile(@CurrentUser() user: User) {
+    /* eslint-disable @typescript-eslint/no-unused-vars */
+    const {
+      hashedRefreshToken: _,
+      googleCalendarToken: __,
+      googleCalendarRefreshToken: ___,
+      ...safeUser
+    } = user;
+    /* eslint-enable @typescript-eslint/no-unused-vars */
     return {
       success: true,
-      data: user,
+      data: safeUser,
     };
   }
 

@@ -21,7 +21,11 @@ import { InviteCodeMiddleware } from './middleware/invite-code.middleware';
       useFactory: (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_ACCESS_SECRET'),
         signOptions: {
-          expiresIn: configService.get<string>('JWT_ACCESS_EXPIRES_IN', '15m'),
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          expiresIn: configService.get<string>(
+            'JWT_ACCESS_EXPIRES_IN',
+            '15m',
+          ) as any,
         },
       }),
     }),
