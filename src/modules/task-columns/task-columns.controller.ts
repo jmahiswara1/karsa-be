@@ -8,6 +8,14 @@ import {
   Delete,
   UseGuards,
 } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiBody,
+} from '@nestjs/swagger';
 import { TaskColumnsService } from './task-columns.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -36,27 +44,41 @@ const ReorderColumnsSchema = z.object({
 });
 export class ReorderColumnsDto extends createZodDto(ReorderColumnsSchema) {}
 
+@ApiTags('TaskColumns')
+@ApiBearerAuth()
 @Controller('api/task-columns')
 @UseGuards(JwtAuthGuard)
 export class TaskColumnsController {
   constructor(private readonly taskColumnsService: TaskColumnsService) {}
 
   @Get()
+  @ApiOperation({ summary: 'Get all task columns for the current user' })
+  @ApiResponse({ status: 200, description: 'Columns retrieved successfully' })
   async findAll(@CurrentUser() user: User) {
     return this.taskColumnsService.findAll(user.id);
   }
 
   @Post()
+  @ApiOperation({ summary: 'Create a new task column' })
+  @ApiResponse({ status: 201, description: 'Column created successfully' })
+  @ApiBody({ type: CreateTaskColumnDto })
   async create(@CurrentUser() user: User, @Body() dto: CreateTaskColumnDto) {
     return this.taskColumnsService.create(user.id, dto);
   }
 
   @Post('reorder')
+  @ApiOperation({ summary: 'Reorder task columns' })
+  @ApiResponse({ status: 200, description: 'Columns reordered successfully' })
+  @ApiBody({ type: ReorderColumnsDto })
   async reorder(@CurrentUser() user: User, @Body() dto: ReorderColumnsDto) {
     return this.taskColumnsService.reorder(user.id, dto);
   }
 
   @Patch(':id')
+  @ApiOperation({ summary: 'Update a task column' })
+  @ApiResponse({ status: 200, description: 'Column updated successfully' })
+  @ApiParam({ name: 'id', type: String, description: 'Column ID' })
+  @ApiBody({ type: UpdateTaskColumnDto })
   async update(
     @Param('id') id: string,
     @CurrentUser() user: User,
@@ -66,6 +88,9 @@ export class TaskColumnsController {
   }
 
   @Delete(':id')
+  @ApiOperation({ summary: 'Delete a task column' })
+  @ApiResponse({ status: 200, description: 'Column deleted successfully' })
+  @ApiParam({ name: 'id', type: String, description: 'Column ID' })
   async remove(@Param('id') id: string, @CurrentUser() user: User) {
     await this.taskColumnsService.remove(id, user.id);
     return { success: true, data: null };

@@ -9,6 +9,15 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiBody,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { AssistantService } from './assistant.service';
 import { ConversationService } from './conversation.service';
@@ -24,6 +33,8 @@ import {
   logPromptMetadata,
 } from './utils/prompt-security.util';
 
+@ApiTags('Assistant')
+@ApiBearerAuth()
 @Controller('api/assistant')
 @UseGuards(JwtAuthGuard)
 export class AssistantController {
@@ -34,6 +45,8 @@ export class AssistantController {
 
   @Post('chat')
   @Throttle({ strict: { ttl: 60000, limit: 10 } })
+  @ApiOperation({ summary: 'Send a chat prompt to the assistant' })
+  @ApiResponse({ status: 200, description: 'Success' })
   async chat(
     @CurrentUser() user: { id: string },
     @Body('prompt') prompt: string,
@@ -59,6 +72,9 @@ export class AssistantController {
 
   @Post('create-entities')
   @Throttle({ strict: { ttl: 60000, limit: 10 } })
+  @ApiOperation({ summary: 'Create entities from assistant actions' })
+  @ApiResponse({ status: 200, description: 'Success' })
+  @ApiBody({ type: ExecuteActionsDto })
   async createEntities(
     @CurrentUser() user: { id: string },
     @Body() dto: ExecuteActionsDto,
@@ -80,6 +96,9 @@ export class AssistantController {
   // ── Conversation Endpoints ──────────────────────────────────────
 
   @Get('conversations')
+  @ApiOperation({ summary: 'List all conversations for the current user' })
+  @ApiResponse({ status: 200, description: 'Success' })
+  @ApiQuery({ name: 'type', required: false, type: String })
   async listConversations(
     @CurrentUser() user: { id: string },
     @Query('type') type?: string,
@@ -89,6 +108,9 @@ export class AssistantController {
   }
 
   @Get('conversations/:id/messages')
+  @ApiOperation({ summary: 'Get messages for a specific conversation' })
+  @ApiResponse({ status: 200, description: 'Success' })
+  @ApiParam({ name: 'id', type: String })
   async getConversationMessages(
     @CurrentUser() user: { id: string },
     @Param('id') id: string,
@@ -97,6 +119,9 @@ export class AssistantController {
   }
 
   @Post('conversations')
+  @ApiOperation({ summary: 'Create a new conversation' })
+  @ApiResponse({ status: 201, description: 'Created' })
+  @ApiBody({ type: CreateConversationDto })
   async createConversation(
     @CurrentUser() user: { id: string },
     @Body() dto: CreateConversationDto,
@@ -105,6 +130,10 @@ export class AssistantController {
   }
 
   @Patch('conversations/:id')
+  @ApiOperation({ summary: 'Update a conversation title' })
+  @ApiResponse({ status: 200, description: 'Success' })
+  @ApiParam({ name: 'id', type: String })
+  @ApiBody({ type: UpdateConversationDto })
   async updateConversation(
     @CurrentUser() user: { id: string },
     @Param('id') id: string,
@@ -114,6 +143,9 @@ export class AssistantController {
   }
 
   @Delete('conversations/:id')
+  @ApiOperation({ summary: 'Delete a conversation' })
+  @ApiResponse({ status: 200, description: 'Success' })
+  @ApiParam({ name: 'id', type: String })
   async deleteConversation(
     @CurrentUser() user: { id: string },
     @Param('id') id: string,
@@ -123,6 +155,10 @@ export class AssistantController {
   }
 
   @Post('conversations/:id/messages')
+  @ApiOperation({ summary: 'Add a message to a conversation' })
+  @ApiResponse({ status: 201, description: 'Created' })
+  @ApiParam({ name: 'id', type: String })
+  @ApiBody({ type: CreateMessageDto })
   async addMessage(
     @CurrentUser() user: { id: string },
     @Param('id') id: string,

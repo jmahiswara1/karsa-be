@@ -9,6 +9,15 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiBody,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { NotesService } from './notes.service';
 import { CreateNoteDto } from './dto/create-note.dto';
 import { UpdateNoteDto } from './dto/update-note.dto';
@@ -18,12 +27,17 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { User } from '@prisma/client';
 
+@ApiTags('Notes')
+@ApiBearerAuth()
 @Controller('api/notes')
 @UseGuards(JwtAuthGuard)
 export class NotesController {
   constructor(private readonly notesService: NotesService) {}
 
   @Post()
+  @ApiOperation({ summary: 'Create a new note' })
+  @ApiResponse({ status: 201, description: 'Note created successfully' })
+  @ApiBody({ type: CreateNoteDto })
   async create(
     @CurrentUser() user: User,
     @Body() createNoteDto: CreateNoteDto,
@@ -37,6 +51,9 @@ export class NotesController {
   }
 
   @Get()
+  @ApiOperation({ summary: 'Get all notes for the current user' })
+  @ApiResponse({ status: 200, description: 'Notes retrieved successfully' })
+  @ApiQuery({ type: NoteQueryDto })
   async findAll(@CurrentUser() user: User, @Query() query: NoteQueryDto) {
     const result = await this.notesService.findAll(user.id, query);
     return {
@@ -47,6 +64,9 @@ export class NotesController {
   }
 
   @Patch('reorder')
+  @ApiOperation({ summary: 'Reorder notes' })
+  @ApiResponse({ status: 200, description: 'Notes reordered successfully' })
+  @ApiBody({ type: ReorderNotesDto })
   async reorder(
     @CurrentUser() user: User,
     @Body() reorderNotesDto: ReorderNotesDto,
@@ -59,6 +79,9 @@ export class NotesController {
   }
 
   @Get(':id')
+  @ApiOperation({ summary: 'Get a note by ID' })
+  @ApiResponse({ status: 200, description: 'Note retrieved successfully' })
+  @ApiParam({ name: 'id', type: String, description: 'Note ID' })
   async findOne(@CurrentUser() user: User, @Param('id') id: string) {
     const note = await this.notesService.findOne(user.id, id);
     return {
@@ -69,6 +92,10 @@ export class NotesController {
   }
 
   @Patch(':id')
+  @ApiOperation({ summary: 'Update a note' })
+  @ApiResponse({ status: 200, description: 'Note updated successfully' })
+  @ApiParam({ name: 'id', type: String, description: 'Note ID' })
+  @ApiBody({ type: UpdateNoteDto })
   async update(
     @CurrentUser() user: User,
     @Param('id') id: string,
@@ -83,6 +110,9 @@ export class NotesController {
   }
 
   @Delete(':id')
+  @ApiOperation({ summary: 'Delete a note' })
+  @ApiResponse({ status: 200, description: 'Note deleted successfully' })
+  @ApiParam({ name: 'id', type: String, description: 'Note ID' })
   async remove(@CurrentUser() user: User, @Param('id') id: string) {
     await this.notesService.remove(user.id, id);
     return {

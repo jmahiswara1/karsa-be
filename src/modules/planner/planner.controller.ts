@@ -10,6 +10,15 @@ import {
   UseGuards,
   Logger,
 } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiBody,
+  ApiParam,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { PlannerService } from './planner.service';
@@ -18,6 +27,8 @@ import { GeneratePlanDto } from './dto/generate-plan.dto';
 import { CreatePlannerEntryDto } from './dto/create-planner-entry.dto';
 import { UpdatePlannerEntryDto } from './dto/update-planner-entry.dto';
 
+@ApiTags('Planner')
+@ApiBearerAuth()
 @Controller('api/planner')
 @UseGuards(JwtAuthGuard)
 export class PlannerController {
@@ -31,6 +42,9 @@ export class PlannerController {
   // ── CRUD ──────────────────────────────────────────
 
   @Post('entries')
+  @ApiOperation({ summary: 'Create a new planner entry' })
+  @ApiResponse({ status: 201, description: 'Success' })
+  @ApiBody({ type: CreatePlannerEntryDto })
   async create(
     @CurrentUser() user: { id: string },
     @Body() dto: CreatePlannerEntryDto,
@@ -40,6 +54,11 @@ export class PlannerController {
   }
 
   @Get('entries')
+  @ApiOperation({ summary: 'Get all planner entries' })
+  @ApiResponse({ status: 200, description: 'Success' })
+  @ApiQuery({ name: 'date', required: false, type: String })
+  @ApiQuery({ name: 'startDate', required: false, type: String })
+  @ApiQuery({ name: 'endDate', required: false, type: String })
   async findAll(
     @CurrentUser() user: { id: string },
     @Query('date') date?: string,
@@ -56,12 +75,19 @@ export class PlannerController {
   }
 
   @Get('entries/:id')
+  @ApiOperation({ summary: 'Get a planner entry by ID' })
+  @ApiResponse({ status: 200, description: 'Success' })
+  @ApiParam({ name: 'id', type: String })
   async findOne(@CurrentUser() user: { id: string }, @Param('id') id: string) {
     const entry = await this.plannerService.findOne(user.id, id);
     return { success: true, data: entry };
   }
 
   @Patch('entries/:id')
+  @ApiOperation({ summary: 'Update a planner entry' })
+  @ApiResponse({ status: 200, description: 'Success' })
+  @ApiParam({ name: 'id', type: String })
+  @ApiBody({ type: UpdatePlannerEntryDto })
   async update(
     @CurrentUser() user: { id: string },
     @Param('id') id: string,
@@ -72,6 +98,9 @@ export class PlannerController {
   }
 
   @Delete('entries/:id')
+  @ApiOperation({ summary: 'Delete a planner entry' })
+  @ApiResponse({ status: 200, description: 'Success' })
+  @ApiParam({ name: 'id', type: String })
   async remove(@CurrentUser() user: { id: string }, @Param('id') id: string) {
     const result = await this.plannerService.remove(user.id, id);
     // Also delete the event from Google Calendar if it was synced
@@ -91,6 +120,9 @@ export class PlannerController {
   // ── AI Generate ────────────────────────────────────
 
   @Post('generate')
+  @ApiOperation({ summary: 'Generate an AI-powered plan' })
+  @ApiResponse({ status: 201, description: 'Success' })
+  @ApiBody({ type: GeneratePlanDto })
   async generate(
     @CurrentUser() user: { id: string },
     @Body() dto: GeneratePlanDto,

@@ -1,4 +1,10 @@
 import { Controller, Get, Post, Req, Res, UseGuards } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { GoogleAuthGuard } from '../../common/guards/google-auth.guard';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -7,12 +13,18 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { User } from '@prisma/client';
 import type { Request, Response } from 'express';
 
+@ApiTags('Auth')
 @Controller('api/auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Get('google')
   @UseGuards(GoogleAuthGuard)
+  @ApiOperation({ summary: 'Initiate Google OAuth login' })
+  @ApiResponse({
+    status: 302,
+    description: 'Redirects to Google OAuth consent screen',
+  })
   googleAuth() {
     // Invite code is passed via query param ?invite=xxx
     // GoogleStrategy reads it from req.query.invite
@@ -21,6 +33,11 @@ export class AuthController {
 
   @Get('google/callback')
   @UseGuards(GoogleAuthGuard)
+  @ApiOperation({ summary: 'Handle Google OAuth callback' })
+  @ApiResponse({
+    status: 302,
+    description: 'Redirects to frontend with tokens or error',
+  })
   async googleAuthRedirect(
     @Req() req: Request & { user?: unknown },
     @Res() res: Response,
@@ -67,6 +84,13 @@ export class AuthController {
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get current user profile' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns the authenticated user profile',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   getProfile(@CurrentUser() user: User) {
     /* eslint-disable @typescript-eslint/no-unused-vars */
     const {
@@ -84,6 +108,13 @@ export class AuthController {
 
   @Post('refresh')
   @UseGuards(JwtRefreshAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Refresh access token using refresh token' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns new access and refresh tokens',
+  })
+  @ApiResponse({ status: 401, description: 'Invalid or expired refresh token' })
   async refreshTokens(
     @Req() req: Request & { user: User & { refreshToken: string } },
   ) {
@@ -99,6 +130,10 @@ export class AuthController {
 
   @Post('logout')
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Logout current user and invalidate refresh token' })
+  @ApiResponse({ status: 200, description: 'Logged out successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   async logout(@CurrentUser() user: User) {
     await this.authService.logout(user.id);
     return {

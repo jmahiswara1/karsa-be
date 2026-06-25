@@ -7,6 +7,14 @@ import {
   UseGuards,
   Logger,
 } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiBody,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { GoogleCalendarService } from './google-calendar.service';
@@ -14,6 +22,8 @@ import { PlannerService } from '../planner/planner.service';
 import { TasksService } from '../tasks/tasks.service';
 import type { User } from '@prisma/client';
 
+@ApiTags('GoogleCalendar')
+@ApiBearerAuth()
 @Controller('api/planner/calendar')
 @UseGuards(JwtAuthGuard)
 export class GoogleCalendarController {
@@ -26,6 +36,8 @@ export class GoogleCalendarController {
   ) {}
 
   @Get('status')
+  @ApiOperation({ summary: 'Check Google Calendar connection status' })
+  @ApiResponse({ status: 200, description: 'Success' })
   async getStatus(@CurrentUser() user: User) {
     const hasAccess = await this.googleCalendarService.hasCalendarAccess(
       user.id,
@@ -37,6 +49,10 @@ export class GoogleCalendarController {
   }
 
   @Get('sync-preview')
+  @ApiOperation({ summary: 'Preview planner entries and tasks to sync' })
+  @ApiResponse({ status: 200, description: 'Success' })
+  @ApiQuery({ name: 'startDate', type: String })
+  @ApiQuery({ name: 'endDate', type: String })
   async getSyncPreview(
     @CurrentUser() user: User,
     @Query('startDate') startDate: string,
@@ -73,6 +89,18 @@ export class GoogleCalendarController {
   }
 
   @Post('sync-to-calendar')
+  @ApiOperation({ summary: 'Sync planner entries to Google Calendar' })
+  @ApiResponse({ status: 200, description: 'Success' })
+  @ApiBody({
+    schema: {
+      properties: {
+        startDate: { type: 'string' },
+        endDate: { type: 'string' },
+        timeZone: { type: 'string' },
+      },
+      required: ['startDate', 'endDate'],
+    },
+  })
   async syncToCalendar(
     @CurrentUser() user: User,
     @Body() body: { startDate: string; endDate: string; timeZone?: string },
@@ -149,6 +177,18 @@ export class GoogleCalendarController {
   }
 
   @Post('sync-tasks-to-calendar')
+  @ApiOperation({ summary: 'Sync tasks with deadlines to Google Calendar' })
+  @ApiResponse({ status: 200, description: 'Success' })
+  @ApiBody({
+    schema: {
+      properties: {
+        startDate: { type: 'string' },
+        endDate: { type: 'string' },
+        timeZone: { type: 'string' },
+      },
+      required: ['startDate', 'endDate'],
+    },
+  })
   async syncTasksToCalendar(
     @CurrentUser() user: User,
     @Body() body: { startDate: string; endDate: string; timeZone?: string },
@@ -219,6 +259,20 @@ export class GoogleCalendarController {
   }
 
   @Post('sync-all-to-calendar')
+  @ApiOperation({
+    summary: 'Sync both planner entries and tasks to Google Calendar',
+  })
+  @ApiResponse({ status: 200, description: 'Success' })
+  @ApiBody({
+    schema: {
+      properties: {
+        startDate: { type: 'string' },
+        endDate: { type: 'string' },
+        timeZone: { type: 'string' },
+      },
+      required: ['startDate', 'endDate'],
+    },
+  })
   async syncAllToCalendar(
     @CurrentUser() user: User,
     @Body() body: { startDate: string; endDate: string; timeZone?: string },
@@ -312,6 +366,10 @@ export class GoogleCalendarController {
   }
 
   @Get('events')
+  @ApiOperation({ summary: 'List Google Calendar events for a date range' })
+  @ApiResponse({ status: 200, description: 'Success' })
+  @ApiQuery({ name: 'startDate', type: String })
+  @ApiQuery({ name: 'endDate', type: String })
   async getCalendarEvents(
     @CurrentUser() user: User,
     @Query('startDate') startDate: string,
@@ -340,6 +398,17 @@ export class GoogleCalendarController {
   }
 
   @Post('import-from-calendar')
+  @ApiOperation({ summary: 'Import Google Calendar events as planner entries' })
+  @ApiResponse({ status: 200, description: 'Success' })
+  @ApiBody({
+    schema: {
+      properties: {
+        startDate: { type: 'string' },
+        endDate: { type: 'string' },
+      },
+      required: ['startDate', 'endDate'],
+    },
+  })
   async importFromCalendar(
     @CurrentUser() user: User,
     @Body() body: { startDate: string; endDate: string },
@@ -403,6 +472,8 @@ export class GoogleCalendarController {
   }
 
   @Post('force-reset')
+  @ApiOperation({ summary: 'Force reset all Google Calendar event links' })
+  @ApiResponse({ status: 200, description: 'Success' })
   async forceReset(@CurrentUser() user: User) {
     const [plannerCount, taskCount] = await Promise.all([
       this.plannerService.clearAllGoogleEventIds(user.id),
@@ -424,6 +495,8 @@ export class GoogleCalendarController {
   }
 
   @Get('sync-history')
+  @ApiOperation({ summary: 'Get sync operation history' })
+  @ApiResponse({ status: 200, description: 'Success' })
   async getSyncHistory(@CurrentUser() user: User) {
     const history = await this.googleCalendarService.getSyncHistory(user.id);
     return {
