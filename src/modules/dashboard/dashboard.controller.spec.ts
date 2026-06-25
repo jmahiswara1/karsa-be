@@ -1,11 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DashboardController } from './dashboard.controller';
 import { DashboardService } from './dashboard.service';
-import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 
 const mockDashboardService = {
-  getStats: jest.fn(),
-  getRecentTasks: jest.fn(),
+  getSummary: jest.fn(),
 };
 
 describe('DashboardController', () => {

@@ -4,6 +4,7 @@ import { AssistantService } from './assistant.service';
 describe('AssistantService', () => {
   let service: AssistantService;
   let mockPrisma: any;
+  let mockActivityLog: any;
 
   beforeEach(() => {
     mockPrisma = {
@@ -30,7 +31,12 @@ describe('AssistantService', () => {
       },
     };
 
-    service = new AssistantService(mockPrisma);
+    mockActivityLog = {
+      log: jest.fn(),
+      listByUser: jest.fn(),
+    };
+
+    service = new AssistantService(mockPrisma, mockActivityLog);
 
     // Mock environment variables
     process.env.AI_SERVICE_URL = 'http://127.0.0.1:8000';

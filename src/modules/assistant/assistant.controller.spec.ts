@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AssistantController } from './assistant.controller';
 import { AssistantService } from './assistant.service';
-import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 
 const mockAssistantService = {
   chat: jest.fn(),
