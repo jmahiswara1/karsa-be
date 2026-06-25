@@ -19,6 +19,7 @@ import { PlannerModule } from './modules/planner/planner.module';
 
 import { AdminModule } from './modules/admin/admin.module';
 import { GoogleCalendarModule } from './modules/google-calendar/google-calendar.module';
+import { ActivityLogModule } from './modules/activity-log/activity-log.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -38,6 +39,7 @@ import { GoogleCalendarModule } from './modules/google-calendar/google-calendar.
       },
     ]),
     PrismaModule,
+    ActivityLogModule,
     AuthModule,
     UsersModule,
     ProjectsModule,

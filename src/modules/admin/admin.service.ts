@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { ActivityLogService } from '../activity-log/activity-log.service';
 import type { User, UserStatus } from '@prisma/client';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { UpdateStatusDto } from './dto/update-status.dto';
@@ -10,6 +11,7 @@ export class AdminService {
   constructor(
     private prisma: PrismaService,
     private auditLog: AuditLogService,
+    private activityLog: ActivityLogService,
   ) {}
 
   async getStats() {
@@ -297,5 +299,65 @@ export class AdminService {
 
     await this.prisma.user.delete({ where: { id: userId } });
     return { id: userId };
+  }
+
+  async getUserActivities(userId: string, skip = 0, take = 20) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return this.activityLog.listByUser(userId, skip, take);
+  }
+
+  async listActivities(filters: {
+    skip?: number;
+    take?: number;
+    userId?: string;
+    action?: string;
+    entityType?: string;
+    from?: string;
+    to?: string;
+  }) {
+    const {
+      skip = 0,
+      take = 20,
+      userId,
+      action,
+      entityType,
+      from,
+      to,
+    } = filters;
+
+    const where: Record<string, unknown> = {};
+    if (userId) where.userId = userId;
+    if (action) where.action = action;
+    if (entityType) where.entityType = entityType;
+    if (from || to) {
+      where.createdAt = {};
+      if (from)
+        (where.createdAt as Record<string, unknown>).gte = new Date(from);
+      if (to) (where.createdAt as Record<string, unknown>).lte = new Date(to);
+    }
+
+    const [items, total] = await Promise.all([
+      this.prisma.activityLog.findMany({
+        where,
+        skip,
+        take: Math.min(take, 100),
+        orderBy: { createdAt: 'desc' },
+        include: {
+          user: {
+            select: { id: true, name: true, email: true, avatarUrl: true },
+          },
+        },
+      }),
+      this.prisma.activityLog.count({ where }),
+    ]);
+
+    return { items, total };
   }
 }

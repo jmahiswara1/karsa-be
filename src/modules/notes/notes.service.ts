@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { ActivityLogService } from '../activity-log/activity-log.service';
 import { CreateNoteDto } from './dto/create-note.dto';
 import { UpdateNoteDto } from './dto/update-note.dto';
 import { NoteQueryDto } from './dto/note-query.dto';
@@ -8,15 +9,24 @@ import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class NotesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private activityLog: ActivityLogService,
+  ) {}
 
   async create(userId: string, createNoteDto: CreateNoteDto) {
-    return this.prisma.note.create({
+    const note = await this.prisma.note.create({
       data: {
         ...createNoteDto,
         userId,
       },
     });
+
+    await this.activityLog.log(userId, 'CREATE', 'Note', note.id, {
+      title: note.title,
+    });
+
+    return note;
   }
 
   async findAll(userId: string, query: NoteQueryDto) {
@@ -91,13 +101,22 @@ export class NotesService {
       keys.length > 0 &&
       keys.every((key) => ['folderId', 'order'].includes(key));
 
-    return this.prisma.note.update({
+    const note = await this.prisma.note.update({
       where: { id },
       data: {
         ...updateNoteDto,
         ...(isOnlyMetadata ? { updatedAt: existing.updatedAt } : {}),
       },
     });
+
+    if (!isOnlyMetadata) {
+      await this.activityLog.log(userId, 'UPDATE', 'Note', id, {
+        title: note.title,
+        changes: keys,
+      });
+    }
+
+    return note;
   }
 
   async reorder(userId: string, reorderNotesDto: ReorderNotesDto) {
@@ -124,9 +143,15 @@ export class NotesService {
   }
 
   async remove(userId: string, id: string) {
-    await this.findOne(userId, id); // Ensure it exists and belongs to user
-    return this.prisma.note.delete({
+    const note = await this.findOne(userId, id); // Ensure it exists and belongs to user
+    await this.prisma.note.delete({
       where: { id },
     });
+
+    await this.activityLog.log(userId, 'DELETE', 'Note', id, {
+      title: note.title,
+    });
+
+    return note;
   }
 }

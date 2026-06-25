@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { ActivityLogService } from '../activity-log/activity-log.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { ProjectQueryDto } from './dto/project-query.dto';
@@ -7,15 +8,24 @@ import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class ProjectsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private activityLog: ActivityLogService,
+  ) {}
 
   async create(userId: string, createProjectDto: CreateProjectDto) {
-    return this.prisma.project.create({
+    const project = await this.prisma.project.create({
       data: {
         ...createProjectDto,
         userId,
       },
     });
+
+    await this.activityLog.log(userId, 'CREATE', 'Project', project.id, {
+      title: project.title,
+    });
+
+    return project;
   }
 
   async findAll(userId: string, query: ProjectQueryDto) {
@@ -124,16 +134,29 @@ export class ProjectsService {
 
   async update(userId: string, id: string, updateProjectDto: UpdateProjectDto) {
     await this.findOne(userId, id); // Ensure it exists and belongs to user
-    return this.prisma.project.update({
+    const project = await this.prisma.project.update({
       where: { id },
       data: updateProjectDto,
     });
+
+    await this.activityLog.log(userId, 'UPDATE', 'Project', id, {
+      title: project.title,
+      changes: Object.keys(updateProjectDto),
+    });
+
+    return project;
   }
 
   async remove(userId: string, id: string) {
-    await this.findOne(userId, id); // Ensure it exists and belongs to user
-    return this.prisma.project.delete({
+    const project = await this.findOne(userId, id); // Ensure it exists and belongs to user
+    await this.prisma.project.delete({
       where: { id },
     });
+
+    await this.activityLog.log(userId, 'DELETE', 'Project', id, {
+      title: project.title,
+    });
+
+    return project;
   }
 }

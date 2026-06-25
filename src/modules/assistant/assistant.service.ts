@@ -1,5 +1,6 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { ActivityLogService } from '../activity-log/activity-log.service';
 import { ExecuteActionsDto } from './dto/execute-actions.dto';
 import {
   ActionResultDto,
@@ -32,7 +33,10 @@ export class AssistantService {
   >;
   private readonly toolToEntityMap: Record<string, EntityType>;
 
-  constructor(private readonly prisma: PrismaService) {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly activityLog: ActivityLogService,
+  ) {
     this.executors = new Map();
     this.executors.set(EntityType.TASK, new TaskExecutor());
     this.executors.set(EntityType.PROJECT, new ProjectExecutor());
@@ -259,20 +263,14 @@ export class AssistantService {
   }
 
   private async logActivity(userId: string, result: ActionResultDto) {
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-      await (this.prisma as any).activityLog.create({
-        data: {
-          userId,
-          action: 'AI_CREATE',
-          entityType: result.type.toUpperCase(),
-          entityId: result.id!,
-          details: { pendingConfirmation: true },
-        },
-      });
-    } catch (error) {
-      console.error('Failed to log activity:', error);
-      // Non-blocking
-    }
+    await this.activityLog.log(
+      userId,
+      'AI_CREATE',
+      result.type.toUpperCase(),
+      result.id!,
+      {
+        pendingConfirmation: true,
+      },
+    );
   }
 }
