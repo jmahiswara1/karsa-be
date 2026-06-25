@@ -1,7 +1,14 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  BadRequestException,
+  Logger,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { UsersService } from '../users/users.service';
+import { InviteService } from '../admin/invite.service';
+import { ActivityLogService } from '../activity-log/activity-log.service';
 import * as argon2 from 'argon2';
 import type { User } from '@prisma/client';
 import type { Profile } from 'passport-google-oauth20';
@@ -16,40 +23,82 @@ export type UserRole = User['role'];
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private usersService: UsersService,
     private jwtService: JwtService,
     private configService: ConfigService,
+    private inviteService: InviteService,
+    private activityLog: ActivityLogService,
   ) {}
 
   async validateGoogleUser(
     profile: Profile,
     accessToken?: string,
     refreshToken?: string,
+    inviteCode?: string,
   ): Promise<User> {
     const { id, emails, displayName, photos } = profile;
     const email = emails?.[0]?.value || '';
     const avatarUrl = photos?.[0]?.value;
 
+    this.logger.log(
+      `validateGoogleUser: googleId=${id}, email=${email}, inviteCode=${inviteCode || 'none'}`,
+    );
+
     let user = await this.usersService.findByGoogleId(id);
 
     if (!user) {
+      this.logger.log(`No user found by googleId, trying email lookup`);
       user = await this.usersService.findByEmail(email);
       if (user) {
+        this.logger.log(
+          `Found existing user by email: ${user.id} (${user.email}), status=${user.status}`,
+        );
         // Link google account to existing email
         // Implement logic to update user with googleId if needed, skipping for now
       } else {
+        this.logger.log(`No user found by email either, checking user count`);
         const userCount = await this.usersService.count();
-        const status = userCount === 0 ? 'ACTIVE' : 'PENDING';
+        this.logger.log(`Total users in DB: ${userCount}`);
 
-        user = await this.usersService.createFromGoogle({
-          email,
-          name: displayName,
-          googleId: id,
-          avatarUrl,
-          status,
-        });
+        // First user is auto-approved as ADMIN
+        if (userCount === 0) {
+          user = await this.usersService.createFromGoogle({
+            email,
+            name: displayName,
+            googleId: id,
+            avatarUrl,
+            status: 'ACTIVE',
+          });
+        } else {
+          // All other users need a valid invite code
+          if (!inviteCode) {
+            this.logger.warn(`New user without invite code, rejecting`);
+            throw new BadRequestException(
+              'Invite code is required for registration',
+            );
+          }
+
+          const invite = await this.inviteService.validate(inviteCode, email);
+
+          user = await this.usersService.createFromGoogle({
+            email,
+            name: displayName,
+            googleId: id,
+            avatarUrl,
+            status: 'ACTIVE',
+          });
+
+          // Mark invite as used
+          await this.inviteService.consume(invite.code, user.id);
+        }
       }
+    } else {
+      this.logger.log(
+        `Found user by googleId: ${user.id} (${user.email}), status=${user.status}`,
+      );
     }
 
     // Store Google Calendar tokens if provided
@@ -60,6 +109,10 @@ export class AuthService {
         refreshToken ?? '',
       );
     }
+
+    await this.activityLog.log(user.id, 'LOGIN', 'User', user.id, {
+      email: user.email,
+    });
 
     return user;
   }

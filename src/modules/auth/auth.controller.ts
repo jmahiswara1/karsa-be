@@ -14,7 +14,9 @@ export class AuthController {
   @Get('google')
   @UseGuards(GoogleAuthGuard)
   googleAuth() {
-    // Initiates the Google OAuth flow
+    // Invite code is passed via query param ?invite=xxx
+    // GoogleStrategy reads it from req.query.invite
+    // Passport handles the redirect to Google OAuth
   }
 
   @Get('google/callback')
@@ -23,8 +25,14 @@ export class AuthController {
     @Req() req: Request & { user?: unknown },
     @Res() res: Response,
   ) {
-    const user = req.user as User;
     const frontendUrl = process.env.CORS_ORIGIN || 'http://localhost:3000';
+
+    const user = req.user as User;
+    if (!user) {
+      return res.redirect(
+        `${frontendUrl}/callback?error=authentication_failed`,
+      );
+    }
 
     if (user.status === 'PENDING') {
       const pendingUser = JSON.stringify({
@@ -52,7 +60,7 @@ export class AuthController {
     );
 
     // Redirect to frontend with tokens
-    res.redirect(
+    return res.redirect(
       `${frontendUrl}/callback?access_token=${tokens.accessToken}&refresh_token=${tokens.refreshToken}`,
     );
   }

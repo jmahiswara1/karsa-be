@@ -19,8 +19,17 @@ export class ResponseInterceptor<T> implements NestInterceptor<T, Response<T>> {
     context: ExecutionContext,
     next: CallHandler,
   ): Observable<Response<T>> {
+    /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
     return next.handle().pipe(
       map((data: any) => {
+        const res = context.switchToHttp().getResponse();
+
+        // If the controller already sent the response (e.g. res.redirect()),
+        // skip wrapping to avoid ERR_HTTP_HEADERS_SENT.
+        if (res.headersSent) {
+          return data as Response<T>;
+        }
+
         // If the controller already wrapped the response, don't wrap it again
         if (
           data &&
@@ -30,8 +39,8 @@ export class ResponseInterceptor<T> implements NestInterceptor<T, Response<T>> {
         ) {
           return {
             ...data,
-            message: data.message || 'Success',
-          };
+            message: (data.message as string) || 'Success',
+          } as Response<T>;
         }
         return {
           success: true,
@@ -40,5 +49,6 @@ export class ResponseInterceptor<T> implements NestInterceptor<T, Response<T>> {
         };
       }),
     );
+    /* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
   }
 }

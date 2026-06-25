@@ -21,6 +21,16 @@ export class HttpExceptionFilter implements ExceptionFilter {
       this.logger.error(
         `${request.method} ${request.url} -> ${exception instanceof Error ? exception.stack : String(exception)}`,
       );
+    } else {
+      this.logger.warn(
+        `${request.method} ${request.url} -> ${exception.getStatus()} ${exception.message}`,
+      );
+    }
+
+    // If the response has already been sent (e.g. by a guard redirect),
+    // skip writing again to avoid ERR_HTTP_HEADERS_SENT.
+    if (response.headersSent) {
+      return;
     }
 
     const status =
