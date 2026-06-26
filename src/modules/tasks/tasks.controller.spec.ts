@@ -1,7 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { TasksController } from './tasks.controller';
 import { TasksService } from './tasks.service';
-import { PrismaService } from '../../database/prisma.service';
 
 describe('TasksController', () => {
   let controller: TasksController;
@@ -10,9 +9,8 @@ describe('TasksController', () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [TasksController],
       providers: [
-        TasksService,
         {
-          provide: PrismaService,
+          provide: TasksService,
           useValue: {},
         },
       ],

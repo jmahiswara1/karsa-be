@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { TasksService } from './tasks.service';
 import { PrismaService } from '../../database/prisma.service';
+import { ActivityLogService } from '../activity-log/activity-log.service';
 
 describe('TasksService', () => {
   let service: TasksService;
@@ -12,6 +13,10 @@ describe('TasksService', () => {
         {
           provide: PrismaService,
           useValue: {},
+        },
+        {
+          provide: ActivityLogService,
+          useValue: { log: jest.fn() },
         },
       ],
     }).compile();
