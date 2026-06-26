@@ -18,21 +18,6 @@ services:
       timeout: 5s
       retries: 5
 
-  redis:
-    image: redis:7-alpine
-    container_name: karsa_redis
-    restart: unless-stopped
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    networks: [karsa_network]
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
   be-karsa:
     build: .
     container_name: karsa_be
@@ -43,9 +28,8 @@ services:
       PORT: 3001
       NODE_ENV: production
       DATABASE_URL: postgresql://karsa:karsa_password@karsa_postgres:5432/karsa_db?schema=public
-      REDIS_URL: redis://karsa_redis:6379
       AI_SERVICE_URL: http://karsa_ai:8000
-      AI_SERVICE_TOKEN: ${BE_AI_SERVICE_TOKEN:-gadangganteng}
+      AI_SERVICE_TOKEN: ${AI_SERVICE_TOKEN}
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
       JWT_ACCESS_EXPIRES_IN: 15m
@@ -57,14 +41,24 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
-        condition: service_healthy
+    networks: [karsa_network]
+
+  ai-karsa:
+    build: ../ai-karsa
+    container_name: karsa_ai
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      AI_SERVICE_TOKEN: ${AI_SERVICE_TOKEN}
+      SUMOPOD_BASE_URL: ${SUMOPOD_BASE_URL}
+      SUMOPOD_API_KEY: ${SUMOPOD_API_KEY}
+      SUMOPOD_MODEL: ${SUMOPOD_MODEL}
+      ACTIVE_PROVIDER: ${ACTIVE_PROVIDER:-sumopod}
     networks: [karsa_network]
 
 networks:
   karsa_network:
-    external: true
 
 volumes:
   postgres_data:
-  redis_data:
